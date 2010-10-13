@@ -37,13 +37,13 @@ line = do
 
 getlines = many line
 
-parseMarkup :: String -> IO ()
+parseMarkup :: String -> String
 parseMarkup input = case (parse getlines "markup" input) of
-    Left err -> print err
-    Right vals -> print vals
+    Left err -> show err
+    Right vals -> show vals
 
 main :: IO ()
 main = do
     input <- readFile "input.mup"
-    parseMarkup input
+    print $ parseMarkup input
 
