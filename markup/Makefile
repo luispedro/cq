@@ -1,2 +1,2 @@
-markup: Main.hs
-	ghc --make Main.hs -o markup
+markup: Main.hs Markup.hs
+	ghc --make Main.hs Markup.hs -o markup
