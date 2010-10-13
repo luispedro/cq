@@ -10,19 +10,31 @@ parseJust parser input = (parse parser "test" input)
 
 tracex x = trace (show x) x
 
-testLineIndent0 = TestCase (assertEqual "should be zero" 0 level)
-    where
-    Right (IndentedLine level _) = (parseJust line "this is a unindented line\n")
 
-testLineIndent2 = TestCase (assertEqual "should be 2" 2 level)
+tests = TestList [testLineIndent0, testLineIndent2, testLineIndent_tab, testLineIndent_tab_neol, test_isBlankLine0, test_isBlankLine1]
     where
-    Right (IndentedLine level _) = parseJust line "  this is a two indented line\n"
+    testLineIndent0 = TestCase (assertEqual "should be zero" 0 level)
+        where
+        Right (IndentedLine level _) = (parseJust line "this is a unindented line\n")
 
-testLineIndent_tab = TestCase (assertEqual "should be 8" 8 level)
-    where
-    Right (IndentedLine level _) = parseJust line "\tthis is a two indented line\n"
+    testLineIndent2 = TestCase (assertEqual "should be 2" 2 level)
+        where
+        Right (IndentedLine level _) = parseJust line "  this is a two indented line\n"
 
-tests = TestList [testLineIndent0, testLineIndent2, testLineIndent_tab]
+    testLineIndent_tab = TestCase (assertEqual "should be 8" 8 level)
+        where
+        Right (IndentedLine level _) = parseJust line "\tthis is a tab indented line\n"
+
+    testLineIndent_tab_neol = TestCase (assertEqual "should be 9" 9 level)
+        where
+        Right (IndentedLine level _) = parseJust line "\t his is a tab indented line with no eol"
+
+    test_isBlankLine0 = TestCase (assertBool "should be blank" (isBlankLine parsed))
+        where
+        Right parsed = parseJust line "     "
+    test_isBlankLine1 = TestCase (assertBool "should NOT be blank" (not $ isBlankLine parsed))
+        where
+        Right parsed = parseJust line "     something"
 
 main = runTestTT tests
 
