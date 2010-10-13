@@ -18,7 +18,11 @@ testLineIndent2 = TestCase (assertEqual "should be 2" 2 level)
     where
     Right (IndentedLine level _) = parseJust line "  this is a two indented line\n"
 
-tests = TestList [TestLabel "test0" testLineIndent0, TestLabel "test2" testLineIndent2]
+testLineIndent_tab = TestCase (assertEqual "should be 8" 8 level)
+    where
+    Right (IndentedLine level _) = parseJust line "\tthis is a two indented line\n"
+
+tests = TestList [testLineIndent0, testLineIndent2, testLineIndent_tab]
 
 main = runTestTT tests
 
