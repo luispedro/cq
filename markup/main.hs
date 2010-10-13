@@ -8,18 +8,32 @@ newline = try (string "\r\n" >> return '\n')
     <|> (string "\r" >> return '\n')
     <|> (string "\n" >> return '\n')
 
-tab :: Parser String
-tab = (string "\t") >> (return "        ")
-
 
 charToString :: Char -> Parser String
 charToString x = return [x]
 
-line :: Parser String
+
+indentation :: Parser Integer
+indentation = indentation' 0
+    where
+        indentation' n =
+            (char '\t' >> (indentation' (n+8)))
+            <|> (char ' ' >> (indentation' (n+1)))
+            <|> (return n)
+
+
+data IndentedLine = IndentedLine Integer String
+
+
+instance Show IndentedLine where
+    show (IndentedLine level str) = "IL(" ++ (show level) ++ "):" ++ str
+
+line :: Parser IndentedLine
 line = do
-    contents <- many ((letter >>= charToString) <|> (string " ") <|> tab) 
+    level <- indentation
+    contents <- many ((letter >>= charToString) <|> (string " "))
     newline
-    return $ foldl (++) "" contents
+    return $ IndentedLine level $ foldl (++) "" contents
 
 getlines = many line
 
