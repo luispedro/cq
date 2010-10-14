@@ -15,19 +15,19 @@ tests = TestList [testLineIndent0, testLineIndent2, testLineIndent_tab, testLine
     where
     testLineIndent0 = TestCase (assertEqual "should be zero" 0 level)
         where
-        Right (IndentedLine level _) = (parseJust line "this is a unindented line\n")
+        Right (IndentedLine level _ _) = (parseJust line "this is a unindented line\n")
 
     testLineIndent2 = TestCase (assertEqual "should be 2" 2 level)
         where
-        Right (IndentedLine level _) = parseJust line "  this is a two-indented line\n"
+        Right (IndentedLine level _ _) = parseJust line "  this is a two-indented line\n"
 
     testLineIndent_tab = TestCase (assertEqual "should be 8" 8 level)
         where
-        Right (IndentedLine level _) = parseJust line "\tthis is a tab-indented line with special chars @#%.;<[()]>\n"
+        Right (IndentedLine level _ _) = parseJust line "\tthis is a tab-indented line with special chars @#%.;<[()]>\n"
 
     testLineIndent_tab_neol = TestCase (assertEqual "should be 9" 9 level)
         where
-        Right (IndentedLine level _) = parseJust line "\t his is a tab indented line with no eol"
+        Right (IndentedLine level _ _) = parseJust line "\t his is a tab indented line with no eol"
 
     test_isBlankLine0 = TestCase (assertBool "should be blank" (isBlankLine parsed))
         where

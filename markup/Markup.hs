@@ -22,21 +22,43 @@ indentation = indentation' 0
             <|> (return n)
 
 
-data IndentedLine = IndentedLine Integer String
+countinstances :: Char -> Parser Integer
+countinstances c = countinstances' c 0
+    where
+        countinstances' c n = (char c >> (countinstances' c (n+1))) <|> (return n)
+
+data StartMarker = NoMarker
+    | Header Integer
+    | Enumerate
+    | Itemise
+
+instance Show StartMarker where
+    show (NoMarker) = ""
+    show (Header n) = "*" ++ (show n) ++ "*"
+    show (Enumerate) = "#"
+    show (Itemise) = "-"
+
+data IndentedLine = IndentedLine Integer StartMarker String
 
 instance Show IndentedLine where
-    show (IndentedLine level str) = "IL(" ++ (show level) ++ "):" ++ str
+    show (IndentedLine level marker str) = "IL(" ++ (show level) ++ ":" ++ (show marker) ++ ")" ++ str
 
 isBlankLine :: IndentedLine -> Bool
-isBlankLine (IndentedLine _ "") = True
-isBlankLine (IndentedLine _ _)  = False
+isBlankLine (IndentedLine _ _ "") = True
+isBlankLine (IndentedLine _ _ _)  = False
+
+startmarker :: Parser StartMarker
+startmarker = (char '#' >> return Enumerate)
+    <|> (char '-' >> return Itemise)
+    <|> (countinstances ' ' >>= \n -> (return $ Header n))
 
 line :: Parser IndentedLine
 line = do
     level <- indentation
+    marker <- startmarker
     contents <- many (noneOf "\n\r")
     newline
-    return $ IndentedLine level contents
+    return $ IndentedLine level marker contents
 
 getlines = many line
 
