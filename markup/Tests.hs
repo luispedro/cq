@@ -1,52 +1,36 @@
 module Main where
 
 import Test.HUnit
-import Text.ParserCombinators.Parsec (parse, Parser, ParseError)
+import Text.ParserCombinators.Parsec (runParser, ParseError, CharParser)
 import Markup
 import Debug.Trace
 
-parseJust :: Parser tk -> String -> Either ParseError tk
-parseJust parser input = (parse parser "test" input)
+parseJust :: CharParser Integer tk -> String -> Either ParseError tk
+parseJust parser input = (runParser parser 0 "test" input)
 
 tracex x = trace (show x) x
 
 
-tests = TestList [testLineIndent0, testLineIndent2, testLineIndent_tab, testLineIndent_tab_neol, test_isBlankLine0, test_isBlankLine1, test_ParagraphEmpty, test_Paragraph, test_ParagraphEOF, test_ParagraphNLEOF]
+tests = TestList [test_indentline, test_indentline_empty, test_indentline_space, test_indentline_space2, test_emptyline, test_paragraph]
     where
-    testLineIndent0 = TestCase (assertEqual "should be zero" 0 level)
+    test_indentline_space = TestCase (assertBool "parse fails (match below)" True)
         where
-        Right (IndentedLine level _ _) = (parseJust line "this is a unindented line\n")
-
-    testLineIndent2 = TestCase (assertEqual "should be 2" 2 level)
+        Left err = (parseJust indentedline "  ")
+    test_indentline_space2 = TestCase (assertBool "parse fails (match below)" True)
         where
-        Right (IndentedLine level _ _) = parseJust line "  this is a two-indented line\n"
-
-    testLineIndent_tab = TestCase (assertEqual "should be 8" 8 level)
+        Left err = (parseJust indentedline "  x")
+    test_indentline_empty = TestCase (assertBool "parse fails (match below)" True)
         where
-        Right (IndentedLine level _ _) = parseJust line "\tthis is a tab-indented line with special chars @#%.;<[()]>\n"
-
-    testLineIndent_tab_neol = TestCase (assertEqual "should be 9" 9 level)
+        Left err = (parseJust indentedline "")
+    test_emptyline = TestCase (assertBool "parse matches below)" True)
         where
-        Right (IndentedLine level _ _) = parseJust line "\t his is a tab indented line with no eol"
-
-    test_isBlankLine0 = TestCase (assertBool "should be blank" (isBlankLine parsed))
+        Right parsed = (parseJust emptyline "\n")
+    test_indentline = TestCase (assertBool "parse matches below)" True)
         where
-        Right parsed = parseJust line "     "
-    test_isBlankLine1 = TestCase (assertBool "should NOT be blank" (not $ isBlankLine parsed))
+        Right parsed = (parseJust indentedline "xxxas")
+    test_paragraph = TestCase (assertBool "parse matches below)" True)
         where
-        Right parsed = parseJust line "     something"
-    test_ParagraphEmpty = TestCase (assertBool "check for match below" True)
-        where
-        Left err = parseJust paragraph ""
-    test_Paragraph = TestCase (assertBool "check for match below" True)
-        where
-        Right _ = parseJust paragraph "This is a paragraph\nWith two lines\n\n"
-    test_ParagraphNLEOF = TestCase (assertBool "check for match below" True)
-        where
-        Right _ = parseJust paragraph "This is a paragraph\nWith two lines and no empty line at end\n"
-    test_ParagraphEOF = TestCase (assertBool "check for match below" True)
-        where
-        Right _ = parseJust paragraph "This is a paragraph\nWith two lines and the last does not finish"
+        Right parsed = (parseJust paragraph "one\ntwo\nthree\nfour\n\n  four\n  five\n")
 
 main = runTestTT tests
 
