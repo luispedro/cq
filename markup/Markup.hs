@@ -20,6 +20,8 @@ data Document = Document [Element]
 instance Show Document where
     show (Document es) = join $ map show es
 
+data IndentState = SimpleIndent Integer Bool
+
 eol = try (string "\r\n" >> return '\n')
     <|> (string "\r" >> return '\n')
     <|> (string "\n" >> return '\n')
@@ -29,33 +31,42 @@ eol = try (string "\r\n" >> return '\n')
 charToString :: Char -> Parser String
 charToString x = return [x]
 
-headermarker :: Parser Integer
+headermarker :: CharParser IndentState Integer
 headermarker = (char '*' >> headermarker' 1)
     where headermarker' n = (char '*' >> headermarker' (n+1)) <|> (return n)
 
-indent :: Integer -> CharParser Integer ()
+indent :: Integer -> CharParser IndentState ()
 indent 0 = return ()
 indent n = (char ' ' >> (indent (n-1)))
 
-enumeratestart :: CharParser Integer ()
+enumeratestart :: CharParser IndentState ()
 enumeratestart = (string "# ") >> return ()
-itemsstart :: CharParser Integer ()
+itemsstart :: CharParser IndentState ()
 itemsstart = (string "- ") >> return ()
 verbatimstart = try $ indent 3
 blockstart = indent 2
 
-curindent :: CharParser Integer ()
-curindent = (getState >>= indent)
+ignore :: IndentState -> CharParser IndentState ()
+ignore (SimpleIndent _ True) = updateState noIgnoreNext
+    where
+    noIgnoreNext (SimpleIndent n True) = SimpleIndent n False
+ignore (SimpleIndent n False) = indent n
 
-push_indent :: Integer -> CharParser Integer ()
-push_indent n = updateState (+n)
-pop_indent :: Integer -> CharParser Integer ()
-pop_indent n = updateState (\x -> (x-n))
+curindent :: CharParser IndentState ()
+curindent = try $ do
+    st <- getState
+    ignore st
 
-emptyline :: CharParser Integer ()
+push_indent :: Integer -> CharParser IndentState ()
+push_indent n = updateState (\(SimpleIndent x s) -> (SimpleIndent (x+n) s))
+pop_indent :: Integer  -> CharParser IndentState ()
+pop_indent n = updateState (\(SimpleIndent x s) -> (SimpleIndent (x-n) s))
+ignore_next = updateState (\(SimpleIndent x _) -> (SimpleIndent x True))
+
+emptyline :: CharParser IndentState ()
 emptyline = (many (char ' ') >> eol >> return ())
 
-indentedline :: CharParser Integer String
+indentedline :: CharParser IndentState String
 indentedline = do
     curindent
     first <- noneOf " -#*\n\r"
@@ -64,28 +75,25 @@ indentedline = do
     return (first:rest)
 
 join = foldr1 (++)
-paragraph :: CharParser Integer Element
+paragraph :: CharParser IndentState Element
 paragraph = do
-    lines <- many indentedline
+    lines <- many1 indentedline
     emptyline
-    return $ Paragraph $ sepjoin " " lines
-
-sepjoin sep strs = sepjoin' sep strs ""
-    where
-    sepjoin' _ [] s = s
-    sepjoin' sep (x:xs) s = sepjoin' sep xs (s ++ sep ++ x)
+    return $ Paragraph $ join $ map (\x -> (x ++ " ")) lines
 
 block = do
     blockstart
     push_indent 2
+    ignore_next
     elems <- many element
     pop_indent 2
-    return elems
+    return $ Block elems
 
-element :: CharParser Integer Element
+element :: CharParser IndentState Element
 element = paragraph
+    <|> block
 
-document :: CharParser Integer Document
+document :: CharParser IndentState Document
 document = do
     elems <- many element
     return $ Document elems
@@ -97,7 +105,7 @@ preprocess input = join $ map tabTo8 input
 
 parseMarkup :: String -> String
 parseMarkup input =
-    case (runParser paragraph 0 "markup" $ preprocess input) of
+    case (runParser document (SimpleIndent 0 False) "markup" $ preprocess input) of
         Left err -> show err
         Right vals -> show vals
 

@@ -5,8 +5,8 @@ import Text.ParserCombinators.Parsec (runParser, ParseError, CharParser)
 import Markup
 import Debug.Trace
 
-parseJust :: CharParser Integer tk -> String -> Either ParseError tk
-parseJust parser input = (runParser parser 0 "test" input)
+parseJust :: CharParser IndentState tk -> String -> Either ParseError tk
+parseJust parser input = (runParser parser (SimpleIndent 0 False) "test" input)
 
 tracex x = trace (show x) x
 
