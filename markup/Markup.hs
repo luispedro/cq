@@ -82,6 +82,7 @@ paragraph = do
     return $ Paragraph $ join $ map (\x -> (x ++ " ")) lines
 
 block = do
+    curindent
     blockstart
     push_indent 2
     ignore_next
@@ -90,8 +91,8 @@ block = do
     return $ Block elems
 
 element :: CharParser IndentState Element
-element = paragraph
-    <|> block
+element = (try paragraph)
+    <|> (try block)
 
 document :: CharParser IndentState Document
 document = do
