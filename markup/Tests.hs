@@ -11,7 +11,7 @@ parseJust parser input = (parse parser "test" input)
 tracex x = trace (show x) x
 
 
-tests = TestList [testLineIndent0, testLineIndent2, testLineIndent_tab, testLineIndent_tab_neol, test_isBlankLine0, test_isBlankLine1]
+tests = TestList [testLineIndent0, testLineIndent2, testLineIndent_tab, testLineIndent_tab_neol, test_isBlankLine0, test_isBlankLine1, test_ParagraphEmpty, test_Paragraph, test_ParagraphEOF, test_ParagraphNLEOF]
     where
     testLineIndent0 = TestCase (assertEqual "should be zero" 0 level)
         where
@@ -35,6 +35,18 @@ tests = TestList [testLineIndent0, testLineIndent2, testLineIndent_tab, testLine
     test_isBlankLine1 = TestCase (assertBool "should NOT be blank" (not $ isBlankLine parsed))
         where
         Right parsed = parseJust line "     something"
+    test_ParagraphEmpty = TestCase (assertBool "check for match below" True)
+        where
+        Left err = parseJust paragraph ""
+    test_Paragraph = TestCase (assertBool "check for match below" True)
+        where
+        Right _ = parseJust paragraph "This is a paragraph\nWith two lines\n\n"
+    test_ParagraphNLEOF = TestCase (assertBool "check for match below" True)
+        where
+        Right _ = parseJust paragraph "This is a paragraph\nWith two lines and no empty line at end\n"
+    test_ParagraphEOF = TestCase (assertBool "check for match below" True)
+        where
+        Right _ = parseJust paragraph "This is a paragraph\nWith two lines and the last does not finish"
 
 main = runTestTT tests
 
