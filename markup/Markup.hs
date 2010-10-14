@@ -2,6 +2,24 @@ module Markup where
 
 import Text.ParserCombinators.Parsec
 
+data Element = Paragraph String
+    | Verbatim String
+    | Enumeration [Element]
+    | Items [Element]
+    | Block [Element]
+
+instance Show Element where
+    show (Paragraph str) = "<p>" ++ str ++ "</p>"
+    show (Verbatim str) = "<pre>" ++ str ++ "</pre>"
+    show (Enumeration elems) = "<ol>" ++ (join $map show elems) ++ "</ol>"
+    show (Items elems) = "<ul>" ++ (join $ map show elems) ++ "</ul>"
+    show (Block elems) = "<blockquote>" ++ (join $ map show elems) ++ "</blockquote>"
+
+data Document = Document [Element]
+
+instance Show Document where
+    show (Document es) = join $ map show es
+
 eol = try (string "\r\n" >> return '\n')
     <|> (string "\r" >> return '\n')
     <|> (string "\n" >> return '\n')
@@ -37,20 +55,25 @@ pop_indent n = updateState (\x -> (x-n))
 emptyline :: CharParser Integer ()
 emptyline = (many (char ' ') >> eol >> return ())
 
+indentedline :: CharParser Integer String
 indentedline = do
     curindent
-    first <- noneOf " -#*"
-    rest <- manyTill anyChar eol
+    first <- noneOf " -#*\n\r"
+    rest <- many (noneOf "\r\n")
+    eol
     return (first:rest)
 
 join = foldr1 (++)
-tracex x = trace (show x) x
-
-paragraph :: CharParser Integer String
+paragraph :: CharParser Integer Element
 paragraph = do
     lines <- many indentedline
     emptyline
-    return $ join lines
+    return $ Paragraph $ sepjoin " " lines
+
+sepjoin sep strs = sepjoin' sep strs ""
+    where
+    sepjoin' _ [] s = s
+    sepjoin' sep (x:xs) s = sepjoin' sep xs (s ++ sep ++ x)
 
 block = do
     blockstart
@@ -59,10 +82,13 @@ block = do
     pop_indent 2
     return elems
 
+element :: CharParser Integer Element
 element = paragraph
 
---paragraphs :: CharParser Integer [String]
---paragraphs = many paragraph
+document :: CharParser Integer Document
+document = do
+    elems <- many element
+    return $ Document elems
 
 preprocess input = join $ map tabTo8 input
     where
