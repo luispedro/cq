@@ -34,9 +34,9 @@ isBlankLine (IndentedLine _ _)  = False
 line :: Parser IndentedLine
 line = do
     level <- indentation
-    contents <- many ((letter >>= charToString) <|> (string " "))
+    contents <- many (noneOf "\n\r")
     newline
-    return $ IndentedLine level $ foldl (++) "" contents
+    return $ IndentedLine level contents
 
 getlines = many line
 

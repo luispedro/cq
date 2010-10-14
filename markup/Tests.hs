@@ -19,11 +19,11 @@ tests = TestList [testLineIndent0, testLineIndent2, testLineIndent_tab, testLine
 
     testLineIndent2 = TestCase (assertEqual "should be 2" 2 level)
         where
-        Right (IndentedLine level _) = parseJust line "  this is a two indented line\n"
+        Right (IndentedLine level _) = parseJust line "  this is a two-indented line\n"
 
     testLineIndent_tab = TestCase (assertEqual "should be 8" 8 level)
         where
-        Right (IndentedLine level _) = parseJust line "\tthis is a tab indented line\n"
+        Right (IndentedLine level _) = parseJust line "\tthis is a tab-indented line with special chars @#%.;<[()]>\n"
 
     testLineIndent_tab_neol = TestCase (assertEqual "should be 9" 9 level)
         where
