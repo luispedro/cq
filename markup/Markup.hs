@@ -4,15 +4,19 @@ import Text.ParserCombinators.Parsec
 
 data Element = Paragraph String
     | Verbatim String
-    | Enumeration [Element]
-    | Items [Element]
+    | UList [Element]
+    | OList [Element]
+    | UListElement [Element]
+    | OListElement [Element]
     | Block [Element]
 
 instance Show Element where
     show (Paragraph str) = "<p>" ++ str ++ "</p>"
     show (Verbatim str) = "<pre>" ++ str ++ "</pre>"
-    show (Enumeration elems) = "<ol>" ++ (join $map show elems) ++ "</ol>"
-    show (Items elems) = "<ul>" ++ (join $ map show elems) ++ "</ul>"
+    show (UList elems) = "<ul>" ++ (join $map show elems) ++ "</ul>"
+    show (UListElement elems) = "<li>" ++ (join $map show elems) ++ "</li>"
+    show (OList elems) = "<ol>" ++ (join $map show elems) ++ "</ol>"
+    show (OListElement elems) = "<li>" ++ (join $map show elems) ++ "</li>"
     show (Block elems) = "<blockquote>" ++ (join $ map show elems) ++ "</blockquote>"
 
 data Document = Document [Element]
