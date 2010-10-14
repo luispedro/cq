@@ -48,6 +48,7 @@ isBlankLine (IndentedLine _ _ "") = True
 isBlankLine (IndentedLine _ _ _)  = False
 
 indentationOf (IndentedLine level _ _) = level
+markerOf (IndentedLine _ marker _) = marker
 contentOf (IndentedLine _ _ content) = content
 
 startmarker :: Parser StartMarker
@@ -63,30 +64,38 @@ line = do
     newline
     return $ IndentedLine level marker contents
 
-data Paragraph = Paragraph Integer [String]
-instance Show Paragraph where
+data Element = Paragraph Integer [String]
+    | Enumeration [String]
+
+instance Show Element where
     show (Paragraph level strs) = "P(" ++ (show level) ++ ") " ++ (foldl1 (++) $ map show strs)
 
-paragraph :: Parser Paragraph
-paragraph = do
-    fl <- line
-    if (isBlankLine fl) then
+paragraph :: Parser Element
+paragraph = do {
+    fl <- line ;
+    if (isEndLine fl) then
         fail "EOF"
       else let
           level = (indentationOf fl)
           fc = (contentOf fl)
-        in paragraph' level [fc]
-        where paragraph' level ls = let
+          paragraph' level ls = let
                   sofar = Paragraph level (reverse ls)
                 in (eof >> return sofar) <|> do
                     nl <- line
-                    if (isBlankLine nl) then
+                    if (isEndLine nl) then
                         return sofar
                      else let
                         nc = (contentOf nl)
-                     in paragraph' level (nc:ls)
+                      in paragraph' level (nc:ls)
+        in paragraph' level [fc]
+    } where
+        isEndLine line = (isBlankLine line) || (isEndMarker (markerOf line))
+        isEndMarker Enumerate = True
+        isEndMarker Itemise = True
+        isEndMarker _ = False
 
-getlines :: Parser [Paragraph]
+
+getlines :: Parser [Element]
 getlines = many paragraph
 
 parseMarkup :: String -> String
