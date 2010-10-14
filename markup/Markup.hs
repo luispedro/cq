@@ -1,6 +1,8 @@
 module Markup where
 
 import Text.ParserCombinators.Parsec
+import Debug.Trace
+tracex x = trace (show x) x
 
 data Element = Paragraph String
     | Verbatim String
@@ -22,7 +24,7 @@ instance Show Element where
 data Document = Document [Element]
 
 instance Show Document where
-    show (Document es) = join $ map show es
+    show (Document es) = "<document>" ++ (join $ map show es) ++ "</document>"
 
 data IndentState = SimpleIndent Integer Bool
 
@@ -48,7 +50,7 @@ enumeratestart = (string "# ") >> return ()
 itemsstart :: CharParser IndentState ()
 itemsstart = (string "- ") >> return ()
 verbatimstart = try $ indent 3
-blockstart = indent 2
+blockstart = try $ indent 2
 
 ignore :: IndentState -> CharParser IndentState ()
 ignore (SimpleIndent _ True) = updateState noIgnoreNext
@@ -62,10 +64,10 @@ curindent = try $ do
     ignore st
 
 push_indent :: Integer -> CharParser IndentState ()
-push_indent n = updateState (\(SimpleIndent x s) -> (SimpleIndent (x+n) s))
+push_indent n = do
+    updateState (\(SimpleIndent x _) -> (SimpleIndent (x+n) True))
 pop_indent :: Integer  -> CharParser IndentState ()
 pop_indent n = updateState (\(SimpleIndent x s) -> (SimpleIndent (x-n) s))
-ignore_next = updateState (\(SimpleIndent x _) -> (SimpleIndent x True))
 
 emptyline :: CharParser IndentState ()
 emptyline = (many (char ' ') >> eol >> return ())
@@ -78,29 +80,46 @@ indentedline = do
     eol
     return (first:rest)
 
-join = foldr1 (++)
+join [] = ""
+join xs = foldr1 (++) xs
 paragraph :: CharParser IndentState Element
 paragraph = do
     lines <- many1 indentedline
     emptyline
     return $ Paragraph $ join $ map (\x -> (x ++ " ")) lines
 
+verbatimline = (try indentedline)
+        <|> (try $ (emptyline >> (return "")))
+
+verbatim = do
+    curindent
+    verbatimstart
+    notFollowedBy (char ' ')
+    push_indent 3
+    lines <- many indentedline
+    pop_indent 3
+    return $ Verbatim $ join $ tracex lines
+
 block = do
     curindent
     blockstart
+    notFollowedBy (char ' ')
     push_indent 2
-    ignore_next
     elems <- many element
     pop_indent 2
     return $ Block elems
 
 element :: CharParser IndentState Element
-element = (try paragraph)
-    <|> (try block)
+element = do
+    (try block)
+    <|> (try paragraph)
+    <|> (try verbatim)
 
 document :: CharParser IndentState Document
 document = do
     elems <- many element
+    skipMany ((char '\n') <|> (char ' '))
+    eof
     return $ Document elems
 
 preprocess input = join $ map tabTo8 input
