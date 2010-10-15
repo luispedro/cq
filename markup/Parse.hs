@@ -80,7 +80,8 @@ curindent = try $ do
 
 
 emptyline :: CharParser IndentState ()
-emptyline = (many (char ' ')) >> eol >> return ()
+emptyline = try $ (many (char ' ')) >> eol >> return ()
+skipemptylines = skipMany emptyline
 
 indentedline :: CharParser IndentState Text
 indentedline = do
@@ -146,7 +147,7 @@ verbatimline = do {
             curindent
           ; vtext <- manyTill anyChar eofl
           ; return (vtext ++ "\n")
-        } <|> (try $ (emptyline >> (return "\n")))
+        } <|> (emptyline >> (return "\n"))
 
 verbatim = do
     verbatimstart
@@ -179,7 +180,6 @@ header = do
 
 element :: CharParser IndentState Element
 element = do
-    skipMany (try emptyline)
     (try paragraph)
     <|> do
         curindent
@@ -188,9 +188,8 @@ element = do
 
 document :: CharParser IndentState Document
 document = do
-    elems <- many $ try element
-    skipMany (eol <|> (char ' '))
-    eof
+    elems <- many $ skipemptylines >> element
+    skipemptylines >> eof
     return $ Document elems
 
 preprocess input = concat $ map tabTo8 $ removeModeline $ fixNLs input
@@ -215,5 +214,4 @@ removeModeline = removeModeline' True 0
 
 parseMarkup :: String -> Either ParseError Document
 parseMarkup input = runParser document (SimpleIndent 0 False 0) "markup" $ preprocess input
-
 
