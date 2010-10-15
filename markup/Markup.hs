@@ -131,10 +131,10 @@ taggedtext = do
     if tag == "note" then do
         push_state
         par <- paragraph
-        -- elems <- many element
+        elems <- many element
         char '}'
         pop_state
-        return $ BlockTag tag [par] -- (par:elems)
+        return $ BlockTag tag (par:elems)
      else do
         Sequence content <- inlinetext
         char '}'
