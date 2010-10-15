@@ -17,6 +17,19 @@ data Element = Paragraph Text
     | Block [Element]
     | Header Integer String
 
+data Document = Document [Element]
+
+blockTags = ["note"]
+
+{- * Markup Structure
+ -
+ - The Markup structure is shown above and maps directly to the definitions in
+ - the spec.
+ -
+ - The block tags are hard-coded as a list to keep the parsing code simpler,
+ - but you could change this and make it a parameter.
+ -}
+
 instance Show Text where
     show (RawText str) = str
     show (InlineTag tag elems) = xmlShow 0 tag $ concat $ map show elems
@@ -35,7 +48,6 @@ instance Show Element where
         show' n (Block elems) = xmlShow n "blockquote" (concat $ map (show' (n+1)) elems)
         show' n (Header hl str) = xmlShow n ("h" ++ (show hl)) str
 
-data Document = Document [Element]
 
 instance Show Document where
     show (Document es) = xmlShow 0 "document" (concat $ map show es)

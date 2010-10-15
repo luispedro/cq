@@ -1,5 +1,26 @@
 module Parse where
 
+{- * General parsing strategy
+ -
+ - ** Character normalisations
+ -
+ - Transformations such as("\r\n" -> '\n' & '\t' -> "        ")
+ - and modeline removal are done as a preprocessing step
+ - (Haskell's laziness is perfect for this code)
+ -
+ - ** Parsing
+ -
+ - Markup parsing is done with Parsec
+ - 
+ - The parser needs to rememember the state: which is the current indentation
+ - level and whether we are in a nested tag. This is done with parser state as
+ - it naturally maps to the Monad abstraction.
+ - 
+ - ** Interface
+ - 
+ - Main function is parseMarkup which is String -> Either ParseError Document
+ -}
+
 import Markup
 import Text.ParserCombinators.Parsec
 
@@ -24,13 +45,15 @@ isNested (SimpleIndent _ _ 0) = False
 isNested (SimpleIndent _ _ n) = True
 
 
+
+
 eol = (char '\n')
-eofl = do
+eofl = do -- end of file or line
     st <- getState
     if isNested st then
         eol <|> (lookAhead (char '}'))
      else
-        eol <|> (eof >> return '\n') -- This always terminates the last line in the file
+        eol <|> (eof >> return '\n')
 
 headermarker :: CharParser IndentState Integer
 headermarker = (char '*' >> headermarker' 1)
@@ -87,7 +110,7 @@ taggedtext = do
     ((char '\\') >> (return $ RawText "\\")) <|> do -- if it is followed by a \, then it is an escaped \
         tag <- tagname
         char '{'
-        if tag == "note" then do
+        if tag `elem` blockTags then do
             push_state
             par <- paragraph
             elems <- many element
@@ -189,8 +212,7 @@ preprocess input = concat $ map tabTo8 $ removeModeline $ fixNLs input
         fixNLs (x:xs) = (x:fixNLs xs)
         modeline = "-*- mode: markup; -*-\n"
 
-parseMarkup :: String -> String
-parseMarkup input =
-    case (runParser document (SimpleIndent 0 False 0) "markup" $ preprocess input) of
-        Left err -> show err
-        Right vals -> show vals
+parseMarkup :: String -> Either ParseError Document
+parseMarkup input = runParser document (SimpleIndent 0 False 0) "markup" $ preprocess input
+
+
