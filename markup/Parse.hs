@@ -32,6 +32,7 @@ import Text.ParserCombinators.Parsec
 data IndentState = SimpleIndent Integer Bool Integer
 
 noIgnoreNext (SimpleIndent n True lv) = SimpleIndent n False lv
+
 push_indent n = updateState $ push_indent' n
     where push_indent' n (SimpleIndent x _ lv) = (SimpleIndent (x+n) True lv)
 pop_indent n = updateState $ pop_indent' n
@@ -132,7 +133,7 @@ escapedchar = (char '\\') >> (oneOf "\\#-") >>= (return . RawText . charToStr)
 
 text :: CharParser IndentState Text
 text = do
-    lookAhead $ noneOf " -#*\n"
+    lookAhead $ noneOf "* \n"
     first <- (try escapedchar) <|> (return $ RawText "")
     txt <- many1 (taggedtext <|> rawtext)
     next <- (char '\n' >> (return $ RawText " ")) <|> (return $ RawText "")
@@ -162,18 +163,24 @@ verbatim = do
 
 metablock n starter constructor = do
     starter
-    notFollowedBy (char ' ')
+    -- notFollowedBy (char ' ')
     push_indent n
-    elems <- many element
+    elems <- many1 (skipemptylines >> element)
     pop_indent n
-    return $ constructor  elems
+    return $ constructor elems
 
 block = metablock 2 blockstart Block
 olistelem = metablock 4 oliststart OListElement
 ulistelem = metablock 4 uliststart UListElement
 
-olist = (many1 olistelem) >>= (return . OList)
-ulist = (many1 ulistelem) >>= (return . UList)
+olist = do
+    first <- olistelem
+    rest <- many (skipemptylines >> curindent >> olistelem)
+    return $ OList (first:rest)
+ulist = do
+    first <- ulistelem
+    rest <- many (skipemptylines >> curindent >> ulistelem)
+    return $ UList (first:rest)
 
 header = do
     n <- headermarker
