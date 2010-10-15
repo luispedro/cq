@@ -85,7 +85,7 @@ join xs = foldr1 (++) xs
 paragraph :: CharParser IndentState Element
 paragraph = do
     lines <- many1 indentedline
-    emptyline
+    optional emptyline
     return $ Paragraph $ join $ map (\x -> (x ++ " ")) lines
 
 verbatimline = (try indentedline)
@@ -114,13 +114,8 @@ block = metablock blockstart Block
 olistelem = metablock oliststart OListElement
 ulistelem = metablock uliststart UListElement
 
-olist = do
-    elems <- many1 olistelem
-    return $ OList elems
-
-ulist = do
-    elems <- many1 ulistelem
-    return $ UList elems
+olist = (many1 olistelem) >>= (return . OList)
+ulist = (many1 ulistelem) >>= (return . UList)
 
 
 element :: CharParser IndentState Element
