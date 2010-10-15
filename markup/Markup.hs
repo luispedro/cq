@@ -45,10 +45,10 @@ indent :: Integer -> CharParser IndentState ()
 indent 0 = return ()
 indent n = (char ' ' >> (indent (n-1)))
 
-enumeratestart :: CharParser IndentState ()
-enumeratestart = (string "# ") >> return ()
-itemsstart :: CharParser IndentState ()
-itemsstart = (string "- ") >> return ()
+oliststart :: CharParser IndentState ()
+oliststart = (string "# ") >> return ()
+uliststart :: CharParser IndentState ()
+uliststart = (string "- ") >> return ()
 verbatimstart = try $ indent 3
 blockstart = try $ indent 2
 
@@ -98,7 +98,7 @@ verbatim = do
     push_indent 3
     lines <- many indentedline
     pop_indent 3
-    return $ Verbatim $ join $ tracex lines
+    return $ Verbatim $ join lines
 
 block = do
     curindent
@@ -109,10 +109,25 @@ block = do
     pop_indent 2
     return $ Block elems
 
+
+olistelem = do
+    curindent
+    oliststart
+    push_indent 2
+    elems <- many element
+    pop_indent 2
+    return $ OListElement elems
+
+olist = do
+    elems <- many1 olistelem
+    return $ OList elems
+
+
 element :: CharParser IndentState Element
 element = do
     (try block)
     <|> (try paragraph)
+    <|> (try olist)
     <|> (try verbatim)
 
 document :: CharParser IndentState Document
