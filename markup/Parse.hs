@@ -151,7 +151,7 @@ verbatimline = do {
 
 verbatim = do
     verbatimstart
-    notFollowedBy (char ' ')
+    -- notFollowedBy (char ' ') This seemed reasonable to me, but it's contradicted by one of the test cases.
     push_indent 3
     lines <- many verbatimline
     pop_indent 3
