@@ -57,7 +57,7 @@ eofl = do -- end of file or line
 
 headermarker :: CharParser IndentState Integer
 headermarker = (char '*' >> headermarker' 1)
-    where headermarker' n = (char '*' >> headermarker' (n+1)) <|> (return n)
+    where headermarker' n = (char '*' >> (headermarker' (n+1))) <|> (char ' ' >> (return n)) <|> (return n) -- allow for "**Header" to parse correctly
 
 indent :: Integer -> CharParser IndentState ()
 indent n = (count (fromInteger n) (char ' ')) >> (return ())
