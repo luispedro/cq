@@ -1,6 +1,12 @@
 module Markup where
 
-xmlShow level element content = concat $ ["<", element, ">", content, "</", element, ">"]
+xmlShow element content = concat $ ["<", element, ">", content, "</", element, ">"]
+xmlEscape [] = []
+xmlEscape ('<':cs) = "&lt;" ++ (xmlEscape cs)
+xmlEscape ('>':cs) = "&gt;" ++ (xmlEscape cs)
+xmlEscape ('&':cs) = "&amp;" ++ (xmlEscape cs)
+xmlEscape (c:cs) = (c:xmlEscape cs)
+
 
 data Text = RawText String
     | LinkText String String -- link key
@@ -32,25 +38,23 @@ blockTags = ["note"]
  -}
 
 instance Show Text where
-    show (RawText str) = str
-    show (InlineTag tag elems) = xmlShow 0 tag $ concat $ map show elems
-    show (BlockTag tag elems) = xmlShow 0 tag $ concat $ map show elems
+    show (RawText str) = (xmlEscape str)
+    show (InlineTag tag elems) = xmlShow tag $ concat $ map show elems
+    show (BlockTag tag elems) = xmlShow tag $ concat $ map show elems
     show (Sequence elems) = concat $ map show elems
 
 instance Show Element where
-    show = show' 0
-        where
-        show' n (Paragraph txt) = xmlShow n "p" (show txt)
-        show' n (Verbatim str) = xmlShow n "pre" str
-        show' n (UList elems) = xmlShow n "ul" (concat $ map (show' (n+1)) elems)
-        show' n (UListElement elems) = xmlShow n "li" (concat $map (show' (n+1)) elems)
-        show' n (OList elems) = xmlShow n "ol" (concat $map (show' (n+1)) elems)
-        show' n (OListElement elems) = xmlShow n "li" (concat $map (show' (n+1)) elems)
-        show' n (Block elems) = xmlShow n "blockquote" (concat $ map (show' (n+1)) elems)
-        show' n (Header hl str) = xmlShow n ("h" ++ (show hl)) str
-        show' n (LinkDef link url) = xmlShow n "link_def" $ concat [xmlShow (n+1) "link" link, xmlShow (n+1) "url" url]
+    show (Paragraph txt) = xmlShow "p" (show txt)
+    show (Verbatim str) = xmlShow "pre" (xmlEscape str)
+    show (UList elems) = xmlShow "ul" (concat $ map show elems)
+    show (UListElement elems) = xmlShow "li" (concat $map show elems)
+    show (OList elems) = xmlShow "ol" (concat $map show elems)
+    show (OListElement elems) = xmlShow "li" (concat $map show elems)
+    show (Block elems) = xmlShow "blockquote" (concat $ map show elems)
+    show (Header hl str) = xmlShow ("h" ++ (show hl)) (xmlEscape str)
+    show (LinkDef link url) = xmlShow "link_def" $ concat [xmlShow "link" link, xmlShow "url" url]
 
 
 instance Show Document where
-    show (Document es) = xmlShow 0 "body" (concat $ map show es)
+    show (Document es) = xmlShow "body" (concat $ map show es)
 
