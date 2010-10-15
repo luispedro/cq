@@ -52,9 +52,9 @@ indent 0 = return ()
 indent n = (char ' ' >> (indent (n-1)))
 
 oliststart :: CharParser IndentState ()
-oliststart = (string "# ") >> return ()
+oliststart = try $ (string "# ") >> return ()
 uliststart :: CharParser IndentState ()
-uliststart = (string "- ") >> return ()
+uliststart = try $ (string "- ") >> return ()
 verbatimstart = try $ indent 3
 blockstart = try $ indent 2
 
@@ -98,7 +98,6 @@ verbatimline = (try indentedline)
         <|> (try $ (emptyline >> (return "")))
 
 verbatim = do
-    curindent
     verbatimstart
     notFollowedBy (char ' ')
     push_indent 3
@@ -108,7 +107,6 @@ verbatim = do
 
 
 metablock starter constructor = do
-    curindent
     starter
     notFollowedBy (char ' ')
     push_indent 2
@@ -124,7 +122,6 @@ olist = (many1 olistelem) >>= (return . OList)
 ulist = (many1 ulistelem) >>= (return . UList)
 
 header = do
-    curindent
     n <- headermarker
     rest <- many (noneOf "\r\n")
     eofl
@@ -133,12 +130,10 @@ header = do
 element :: CharParser IndentState Element
 element = do
     many (try emptyline)
-    (try block)
-    <|> (try paragraph)
-    <|> (try olist)
-    <|> (try ulist)
-    <|> (try verbatim)
-    <|> (try header)
+    (try paragraph)
+    <|> do
+        curindent
+        header <|> olist <|> ulist <|> verbatim <|> block
 
 
 document :: CharParser IndentState Document
