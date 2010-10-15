@@ -63,9 +63,9 @@ indent :: Integer -> CharParser IndentState ()
 indent n = (count (fromInteger n) (char ' ')) >> (return ())
 
 oliststart :: CharParser IndentState ()
-oliststart = try $ (string "# ") >> return ()
+oliststart = try $ (string "  # ") >> return ()
 uliststart :: CharParser IndentState ()
-uliststart = try $ (string "- ") >> return ()
+uliststart = try $ (string "  - ") >> return ()
 verbatimstart = try $ indent 3
 blockstart = try $ indent 2
 
@@ -158,17 +158,17 @@ verbatim = do
     return $ Verbatim $ concat lines
 
 
-metablock starter constructor = do
+metablock n starter constructor = do
     starter
     notFollowedBy (char ' ')
-    push_indent 2
+    push_indent n
     elems <- many element
-    pop_indent 2
+    pop_indent n
     return $ constructor  elems
 
-block = metablock blockstart Block
-olistelem = metablock oliststart OListElement
-ulistelem = metablock uliststart UListElement
+block = metablock 2 blockstart Block
+olistelem = metablock 4 oliststart OListElement
+ulistelem = metablock 4 uliststart UListElement
 
 olist = (many1 olistelem) >>= (return . OList)
 ulist = (many1 ulistelem) >>= (return . UList)
