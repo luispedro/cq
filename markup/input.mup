@@ -1,0 +1,37 @@
+* This is my house
+** This is your house
+Class Enum has a set of operations that underlie the syntactic sugar of
+arithmetic sequences; for example, the arithmetic sequence expression [1,3..]
+stands for enumFromThen 1 3 (see §3.10 for the formal translation). We can now
+
+[Red .. Violet] => [Red, Green, Blue, Indigo, Violet] 
+
+  Note that such a sequence is arithmetic in the sense that the increment between
+  convert between Int and a type in Enum.
+
+  This continues here.
+  and here
+
+    With an inner blockquote
+    baby
+
+And now outside
+
+# first
+
+# second
+
+# third
+  is a bit longer
+
+and has a list inside it
+
+- other list
+- two
+
+Outis
+
+   And a verbatim block
+   right here in Springfield
+   And a verbatim block
+   right here in Springfield
