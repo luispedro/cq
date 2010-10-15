@@ -3,6 +3,7 @@ module Main where
 import Test.HUnit
 import Text.ParserCombinators.Parsec
 import Markup
+import Parse
 import Debug.Trace
 
 parseJust :: CharParser IndentState tk -> String -> Either ParseError tk

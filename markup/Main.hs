@@ -1,6 +1,7 @@
 module Main where
 
 import Markup
+import Parse
 import System.Environment
 
 main :: IO ()
