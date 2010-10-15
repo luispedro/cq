@@ -93,12 +93,12 @@ rawtext :: CharParser IndentState Text
 rawtext = do
     st <- getState
     if isNested st then
-        many1 (noneOf "}\\\n\r") >>= (return . RawText)
+        many1 (noneOf "}\\\n") >>= (return . RawText)
      else
-        many1 (noneOf "\\\n\r") >>= (return . RawText)
+        many1 (noneOf "\\\n") >>= (return . RawText)
 
 rawtextinline :: CharParser IndentState Text
-rawtextinline = many1 (noneOf "\\\n\r}") >>= (return . RawText)
+rawtextinline = many1 (noneOf "\\\n}") >>= (return . RawText)
 
 tagname :: CharParser IndentState String
 tagname = many1 (letter <|> (char '_') <|> (char '.') <|> (char '+'))
@@ -129,7 +129,7 @@ escapedchar = (char '\\') >> (oneOf "\\#-[") >>= (\c -> return $ RawText [c])
 
 text :: CharParser IndentState Text
 text = do
-    lookAhead $ noneOf " -#*\n\r"
+    lookAhead $ noneOf " -#*\n"
     first <- (try escapedchar) <|> (return $ RawText "")
     txt <- many1 (taggedtext <|> rawtext)
     next <- (char '\n' >> (return $ RawText " ")) <|> (return $ RawText "")
@@ -144,8 +144,7 @@ paragraph = do
 
 verbatimline = do {
             curindent
-          ; vtext <- many (noneOf "\n")
-          ; eofl
+          ; vtext <- manyTill anyChar eofl
           ; return vtext
         } <|> (try $ (emptyline >> (return "")))
 
