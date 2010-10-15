@@ -109,7 +109,7 @@ charToStr c = [c]
 taggedtext :: CharParser IndentState Text
 taggedtext = do
     (char '\\')
-    ((oneOf "\\{}[]") >>= (return . RawText . charToStr)) <|> do -- if it is followed by a \, then it is an escaped \
+    ((oneOf "\\{}[]#-*") >>= (return . RawText . charToStr)) <|> do -- if it is followed by a \, then it is an escaped \
         tag <- tagname
         char '{'
         if tag `elem` blockTags then do
