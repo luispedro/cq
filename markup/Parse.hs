@@ -3,28 +3,41 @@ module Parse where
 import Markup
 import Text.ParserCombinators.Parsec
 
+{- IndentState saves the state of the parser
+ -   (nr of indent level measured in spaces)
+ -   (whether we have already consumed the current line's indentation)
+ -   (nesting level [for \note{} style tags]
+ -}
 data IndentState = SimpleIndent Integer Bool Integer
-eol = try (string "\r\n" >> return '\n')
-    <|> (char '\r') <|> (char '\n')
 
+noIgnoreNext (SimpleIndent n True lv) = SimpleIndent n False lv
+push_indent n = updateState $ push_indent' n
+    where push_indent' n (SimpleIndent x _ lv) = (SimpleIndent (x+n) True lv)
+pop_indent n = updateState $ pop_indent' n
+    where pop_indent' n (SimpleIndent x s lv) = (SimpleIndent (x-n) s lv)
+push_state = updateState push_state'
+    where push_state' (SimpleIndent i _ n) = SimpleIndent i True (n+1)
+pop_state = updateState pop_state'
+    where pop_state' (SimpleIndent i _ n) = SimpleIndent i True (n-1)
+
+isNested (SimpleIndent _ _ 0) = False
+isNested (SimpleIndent _ _ n) = True
+
+
+eol = (char '\n')
 eofl = do
     st <- getState
-    if (nestLevelOf st) == 0 then
-        eol  <|> (eof >> return '\n') -- This always terminates the last line in the file
+    if isNested st then
+        eol <|> (eof >> return '\n') -- This always terminates the last line in the file
      else
         eol <|> (lookAhead (char '}'))
-
-
-charToString :: Char -> Parser String
-charToString x = return [x]
 
 headermarker :: CharParser IndentState Integer
 headermarker = (char '*' >> headermarker' 1)
     where headermarker' n = (char '*' >> headermarker' (n+1)) <|> (return n)
 
 indent :: Integer -> CharParser IndentState ()
-indent 0 = return ()
-indent n = (char ' ' >> (indent (n-1)))
+indent n = (count (fromInteger n) (char ' ')) >> (return ())
 
 oliststart :: CharParser IndentState ()
 oliststart = try $ (string "# ") >> return ()
@@ -33,7 +46,6 @@ uliststart = try $ (string "- ") >> return ()
 verbatimstart = try $ indent 3
 blockstart = try $ indent 2
 
-
 curindent :: CharParser IndentState ()
 curindent = try $ do
         st <- getState
@@ -41,23 +53,8 @@ curindent = try $ do
     where
         ignore :: IndentState -> CharParser IndentState ()
         ignore (SimpleIndent _ True _) = updateState noIgnoreNext
-            where
-            noIgnoreNext (SimpleIndent n True lv) = SimpleIndent n False lv
         ignore (SimpleIndent n False _) = indent n
 
-push_indent :: Integer -> CharParser IndentState ()
-push_indent n = do
-    updateState (\(SimpleIndent x _ lv) -> (SimpleIndent (x+n) True lv))
-pop_indent :: Integer  -> CharParser IndentState ()
-pop_indent n = updateState (\(SimpleIndent x s lv) -> (SimpleIndent (x-n) s lv))
-
-push_state = updateState push_state'
-    where
-    push_state' (SimpleIndent i _ n) = SimpleIndent i True (n+1)
-pop_state = updateState pop_state'
-    where
-    pop_state' (SimpleIndent i _ n) = SimpleIndent i True (n-1)
-nestLevelOf (SimpleIndent _ _ n) = n
 
 emptyline :: CharParser IndentState ()
 emptyline = (many (char ' ')) >> eol >> return ()
@@ -73,7 +70,7 @@ indentedline = do
 rawtext :: CharParser IndentState Text
 rawtext = do
     st <- getState
-    if nestLevelOf st == 0 then
+    if isNested st then
         many1 (noneOf "\\\n\r") >>= (return . RawText)
      else
         many1 (noneOf "}\\\n\r") >>= (return . RawText)
@@ -148,7 +145,7 @@ ulist = (many1 ulistelem) >>= (return . UList)
 
 header = do
     n <- headermarker
-    rest <- many (noneOf "\r\n")
+    rest <- many (noneOf "\n")
     eofl
     return $ Header n rest
 
@@ -164,22 +161,25 @@ element = do
 document :: CharParser IndentState Document
 document = do
     elems <- many element
-    skipMany ((char '\n') <|> (char ' '))
+    skipMany (eol <|> (char ' '))
     eof
     return $ Document elems
 
-preprocess input = concat $ map tabTo8 $ removeModeline input
+preprocess input = concat $ map tabTo8 $ removeModeline $ fixNLs input
     where
         tabTo8 '\t' = "        "
         tabTo8 c = [c]
         removeModeline = removeModeline' True 0
         removeModeline' False _ ('\n':xs) = ('\n':removeModeline' True 0 xs)
-        removeModeline' False _ ('\r':xs) = ('\n':removeModeline' True 0 xs)
         removeModeline' False _ (x:xs) = (x:removeModeline' False 0 xs)
         removeModeline' True n (x:xs) = if x /= (modeline !! n) then
-                        (take n modeline) ++ [x] ++ (removeModeline' (x `elem` "\r\n") 0 xs)
+                        (take n modeline) ++ [x] ++ (removeModeline' (x == '\n') 0 xs)
                         else (if n == length modeline then removeModeline' True 0 xs else removeModeline' True (n+1) xs)
         removeModeline' _ _ [] = []
+        fixNLs [] = []
+        fixNLs ('\r':'\n':xs) = ('\n':fixNLs xs)
+        fixNLs ('\n':'\r':xs) = ('\n':fixNLs xs)
+        fixNLs (x:xs) = (x:fixNLs xs)
         modeline = "-*- mode: markup; -*-\n"
 
 parseMarkup :: String -> String
