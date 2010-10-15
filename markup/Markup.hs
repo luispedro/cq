@@ -1,6 +1,6 @@
 module Markup where
 
-import XML
+xmlShow level element content = concat $ ["<", element, ">", content, "</", element, ">"]
 
 data Text = RawText String
     | LinkText String String -- link key

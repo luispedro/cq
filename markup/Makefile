@@ -1,7 +1,7 @@
 all: markup testmarkup
 .PHONY: all
 
-markup: Main.hs Markup.hs XML.hs Parse.hs
+markup: Main.hs Markup.hs Parse.hs
 	ghc --make Main.hs Markup.hs -o markup
 
 testmarkup: Tests.hs Markup.hs Parse.hs
