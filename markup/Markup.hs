@@ -100,27 +100,27 @@ verbatim = do
     pop_indent 3
     return $ Verbatim $ join lines
 
-block = do
+
+metablock starter constructor = do
     curindent
-    blockstart
+    starter
     notFollowedBy (char ' ')
     push_indent 2
     elems <- many element
     pop_indent 2
-    return $ Block elems
+    return $ constructor  elems
 
-
-olistelem = do
-    curindent
-    oliststart
-    push_indent 2
-    elems <- many element
-    pop_indent 2
-    return $ OListElement elems
+block = metablock blockstart Block
+olistelem = metablock oliststart OListElement
+ulistelem = metablock uliststart UListElement
 
 olist = do
     elems <- many1 olistelem
     return $ OList elems
+
+ulist = do
+    elems <- many1 ulistelem
+    return $ UList elems
 
 
 element :: CharParser IndentState Element
@@ -128,6 +128,7 @@ element = do
     (try block)
     <|> (try paragraph)
     <|> (try olist)
+    <|> (try ulist)
     <|> (try verbatim)
 
 document :: CharParser IndentState Document
