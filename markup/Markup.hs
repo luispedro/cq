@@ -13,9 +13,9 @@ data Text = RawText String
 
 instance Show Text where
     show (RawText str) = str
-    show (InlineTag tag elems) = xmlShow 0 tag $ join $ map show elems
-    show (BlockTag tag elems) = xmlShow 0 tag $ join $ map show elems
-    show (Sequence elems) = join $ map show elems
+    show (InlineTag tag elems) = xmlShow 0 tag $ concat $ map show elems
+    show (BlockTag tag elems) = xmlShow 0 tag $ concat $ map show elems
+    show (Sequence elems) = concat $ map show elems
 
 data Element = Paragraph Text
     | Verbatim String
@@ -31,17 +31,17 @@ instance Show Element where
         where
         show' n (Paragraph txt) = xmlShow n "p" (show txt)
         show' n (Verbatim str) = xmlShow n "pre" str
-        show' n (UList elems) = xmlShow n "ul" (join $ map (show' (n+1)) elems)
-        show' n (UListElement elems) = xmlShow n "li" (join $map (show' (n+1)) elems)
-        show' n (OList elems) = xmlShow n "ol" (join $map (show' (n+1)) elems)
-        show' n (OListElement elems) = xmlShow n "li" (join $map (show' (n+1)) elems)
-        show' n (Block elems) = xmlShow n "blockquote" (join $ map (show' (n+1)) elems)
+        show' n (UList elems) = xmlShow n "ul" (concat $ map (show' (n+1)) elems)
+        show' n (UListElement elems) = xmlShow n "li" (concat $map (show' (n+1)) elems)
+        show' n (OList elems) = xmlShow n "ol" (concat $map (show' (n+1)) elems)
+        show' n (OListElement elems) = xmlShow n "li" (concat $map (show' (n+1)) elems)
+        show' n (Block elems) = xmlShow n "blockquote" (concat $ map (show' (n+1)) elems)
         show' n (Header hl str) = xmlShow n ("h" ++ (show hl)) str
 
 data Document = Document [Element]
 
 instance Show Document where
-    show (Document es) = "<document>" ++ (join $ map show es) ++ "</document>"
+    show (Document es) = "<document>" ++ (concat $ map show es) ++ "</document>"
 
 data IndentState = SimpleIndent Integer Bool Integer
 
@@ -134,8 +134,6 @@ text = do
     return $ Sequence (RawText [first]:rest)
 
 
-join [] = ""
-join xs = foldr1 (++) xs
 paragraph :: CharParser IndentState Element
 paragraph = do
     lines <- many1 indentedline
@@ -155,7 +153,7 @@ verbatim = do
     push_indent 3
     lines <- many verbatimline
     pop_indent 3
-    return $ Verbatim $ join lines
+    return $ Verbatim $ concat lines
 
 
 metablock starter constructor = do
@@ -195,7 +193,7 @@ document = do
     eof
     return $ Document elems
 
-preprocess input = join $ map tabTo8 input
+preprocess input = concat $ map tabTo8 input
     where
         tabTo8 '\t' = "        "
         tabTo8 c = [c]
