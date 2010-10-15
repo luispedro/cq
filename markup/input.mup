@@ -1,7 +1,7 @@
 * This is my house
 ** This is your house
 Class Enum has a set of operations that underlie the syntactic sugar of
-arithmetic sequences; for example, the arithmetic sequence expression [1,3..]
+arithmetic sequences; \b{for \i{example},} the arithmetic sequence expression [1,3..]
 stands for enumFromThen 1 3 (see §3.10 for the formal translation). We can now
 
 [Red .. Violet] => [Red, Green, Blue, Indigo, Violet] 

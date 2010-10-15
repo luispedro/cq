@@ -7,11 +7,17 @@ tracex x = trace (show x) x
 
 data Text = RawText String
     | LinkText String String -- link key
-    | InlineTag String String -- tag str
-    | BlockTag String String -- tag str
+    | InlineTag String [Text] -- tag str
+    | BlockTag String [Text] -- tag str
     | Sequence [Text]
 
-data Element = Paragraph String
+instance Show Text where
+    show (RawText str) = str
+    show (InlineTag tag elems) = xmlShow 0 tag $ join $ map show elems
+    show (BlockTag tag elems) = show $ InlineTag tag elems
+    show (Sequence elems) = join $ map show elems
+
+data Element = Paragraph Text
     | Verbatim String
     | UList [Element]
     | OList [Element]
@@ -23,7 +29,7 @@ data Element = Paragraph String
 instance Show Element where
     show = show' 0
         where
-        show' n (Paragraph str) = xmlShow n "p" str
+        show' n (Paragraph txt) = xmlShow n "p" (show txt)
         show' n (Verbatim str) = xmlShow n "pre" str
         show' n (UList elems) = xmlShow n "ul" (join $ map (show' (n+1)) elems)
         show' n (UListElement elems) = xmlShow n "li" (join $map (show' (n+1)) elems)
@@ -84,15 +90,38 @@ pop_indent n = updateState (\(SimpleIndent x s) -> (SimpleIndent (x-n) s))
 emptyline :: CharParser IndentState ()
 emptyline = (many (char ' ')) >> eol >> return ()
 
-indentedline :: CharParser IndentState String
+indentedline :: CharParser IndentState Text
 indentedline = do
     curindent
-    first <- noneOf " -#*\n\r"
-    rest <- text
+    t <- text
     eofl
-    return (first:rest)
+    return t
 
-text = many (noneOf "\r\n")
+
+rawtext :: CharParser IndentState Text
+rawtext = many1 (noneOf "\\\n\r") >>= (return . RawText)
+
+rawtextinline :: CharParser IndentState Text
+rawtextinline = many1 (noneOf "\\\n\r}") >>= (return . RawText)
+
+inlinenote :: CharParser IndentState Text
+inlinenote = do
+    (char '\\')
+    tag <- many1 (noneOf "{\r\n")
+    char '{'
+    Sequence content <- inlinetext
+    char '}'
+    return $ InlineTag tag content
+
+inlinetext :: CharParser IndentState Text
+inlinetext = many (rawtextinline <|> inlinenote) >>= (return . Sequence)
+
+text :: CharParser IndentState Text
+text = do
+    first <- noneOf " -#*\n\r"
+    rest <- many (inlinenote <|> rawtext)
+    return $ Sequence (RawText [first]:rest)
+
 
 join [] = ""
 join xs = foldr1 (++) xs
@@ -100,16 +129,20 @@ paragraph :: CharParser IndentState Element
 paragraph = do
     lines <- many1 indentedline
     optional emptyline
-    return $ Paragraph $ join $ map (\x -> (x ++ " ")) lines
+    return $ Paragraph $ Sequence lines
 
-verbatimline = (try indentedline)
-        <|> (try $ (emptyline >> (return "")))
+verbatimline = do {
+            curindent
+          ; text <- many (noneOf "\r\n")
+          ; eofl
+          ; return text
+        } <|> (try $ (emptyline >> (return "")))
 
 verbatim = do
     verbatimstart
     notFollowedBy (char ' ')
     push_indent 3
-    lines <- many indentedline
+    lines <- many verbatimline
     pop_indent 3
     return $ Verbatim $ join lines
 
