@@ -145,8 +145,8 @@ paragraph = do
 verbatimline = do {
             curindent
           ; vtext <- manyTill anyChar eofl
-          ; return vtext
-        } <|> (try $ (emptyline >> (return "")))
+          ; return (vtext ++ "\n")
+        } <|> (try $ (emptyline >> (return "\n")))
 
 verbatim = do
     verbatimstart
