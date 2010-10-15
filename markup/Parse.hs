@@ -175,13 +175,12 @@ ulist = (many1 ulistelem) >>= (return . UList)
 
 header = do
     n <- headermarker
-    rest <- many (noneOf "\n")
-    eofl
+    rest <- manyTill anyChar eofl
     return $ Header n rest
 
 element :: CharParser IndentState Element
 element = do
-    many (try emptyline)
+    skipMany (try emptyline)
     (try paragraph)
     <|> do
         curindent
@@ -190,7 +189,7 @@ element = do
 
 document :: CharParser IndentState Document
 document = do
-    elems <- many element
+    elems <- many $ try element
     skipMany (eol <|> (char ' '))
     eof
     return $ Document elems
