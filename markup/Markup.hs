@@ -8,13 +8,13 @@ tracex x = trace (show x) x
 data Text = RawText String
     | LinkText String String -- link key
     | InlineTag String [Text] -- tag str
-    | BlockTag String [Text] -- tag str
+    | BlockTag String [Element] -- tag str
     | Sequence [Text]
 
 instance Show Text where
     show (RawText str) = str
     show (InlineTag tag elems) = xmlShow 0 tag $ join $ map show elems
-    show (BlockTag tag elems) = show $ InlineTag tag elems
+    show (BlockTag tag elems) = xmlShow 0 tag $ join $ map show elems
     show (Sequence elems) = join $ map show elems
 
 data Element = Paragraph Text
@@ -43,7 +43,7 @@ data Document = Document [Element]
 instance Show Document where
     show (Document es) = "<document>" ++ (join $ map show es) ++ "</document>"
 
-data IndentState = SimpleIndent Integer Bool
+data IndentState = SimpleIndent Integer Bool Integer
 
 eol = try (string "\r\n" >> return '\n')
     <|> (string "\r" >> return '\n')
@@ -70,22 +70,27 @@ uliststart = try $ (string "- ") >> return ()
 verbatimstart = try $ indent 3
 blockstart = try $ indent 2
 
-ignore :: IndentState -> CharParser IndentState ()
-ignore (SimpleIndent _ True) = updateState noIgnoreNext
-    where
-    noIgnoreNext (SimpleIndent n True) = SimpleIndent n False
-ignore (SimpleIndent n False) = indent n
 
 curindent :: CharParser IndentState ()
 curindent = try $ do
-    st <- getState
-    ignore st
+        st <- getState
+        ignore st
+    where
+        ignore :: IndentState -> CharParser IndentState ()
+        ignore (SimpleIndent _ True _) = updateState noIgnoreNext
+            where
+            noIgnoreNext (SimpleIndent n True lv) = SimpleIndent n False lv
+        ignore (SimpleIndent n False _) = indent n
 
 push_indent :: Integer -> CharParser IndentState ()
 push_indent n = do
-    updateState (\(SimpleIndent x _) -> (SimpleIndent (x+n) True))
+    updateState (\(SimpleIndent x _ lv) -> (SimpleIndent (x+n) True lv))
 pop_indent :: Integer  -> CharParser IndentState ()
-pop_indent n = updateState (\(SimpleIndent x s) -> (SimpleIndent (x-n) s))
+pop_indent n = updateState (\(SimpleIndent x s lv) -> (SimpleIndent (x-n) s lv))
+
+push_state (SimpleIndent i _ n) = SimpleIndent i True (n+1)
+pop_state (SimpleIndent i _ n) = SimpleIndent i True (n-1)
+nestLevelOf (SimpleIndent _ _ n) = n
 
 emptyline :: CharParser IndentState ()
 emptyline = (many (char ' ')) >> eol >> return ()
@@ -99,15 +104,21 @@ indentedline = do
 
 
 rawtext :: CharParser IndentState Text
-rawtext = many1 (noneOf "\\\n\r") >>= (return . RawText)
+rawtext = do
+    st <- getState
+    if nestLevelOf st > 0 then
+        many1 (noneOf "\\\n\r") >>= (return . RawText)
+     else
+        many1 (noneOf "}\\\n\r") >>= (return . RawText)
 
 rawtextinline :: CharParser IndentState Text
 rawtextinline = many1 (noneOf "\\\n\r}") >>= (return . RawText)
 
+tagname = many1 (letter <|> (char '_') <|> (char '.') <|> (char '+'))
 inlinenote :: CharParser IndentState Text
 inlinenote = do
     (char '\\')
-    tag <- many1 (noneOf "{\r\n")
+    tag <- tagname
     char '{'
     Sequence content <- inlinetext
     char '}'
@@ -191,7 +202,7 @@ preprocess input = join $ map tabTo8 input
 
 parseMarkup :: String -> String
 parseMarkup input =
-    case (runParser document (SimpleIndent 0 False) "markup" $ preprocess input) of
+    case (runParser document (SimpleIndent 0 False 0) "markup" $ preprocess input) of
         Left err -> show err
         Right vals -> show vals
 

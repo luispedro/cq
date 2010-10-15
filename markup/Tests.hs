@@ -6,7 +6,7 @@ import Markup
 import Debug.Trace
 
 parseJust :: CharParser IndentState tk -> String -> Either ParseError tk
-parseJust parser input = (runParser parser (SimpleIndent 0 False) "test" input)
+parseJust parser input = (runParser parser (SimpleIndent 0 False 0) "test" input)
 
 tracex x = trace (show x) x
 
