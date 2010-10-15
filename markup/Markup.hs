@@ -50,5 +50,5 @@ instance Show Element where
 
 
 instance Show Document where
-    show (Document es) = xmlShow 0 "document" (concat $ map show es)
+    show (Document es) = xmlShow 0 "body" (concat $ map show es)
 
