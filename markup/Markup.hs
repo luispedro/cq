@@ -11,12 +11,6 @@ data Text = RawText String
     | BlockTag String [Element] -- tag str
     | Sequence [Text]
 
-instance Show Text where
-    show (RawText str) = str
-    show (InlineTag tag elems) = xmlShow 0 tag $ concat $ map show elems
-    show (BlockTag tag elems) = xmlShow 0 tag $ concat $ map show elems
-    show (Sequence elems) = concat $ map show elems
-
 data Element = Paragraph Text
     | Verbatim String
     | UList [Element]
@@ -25,6 +19,12 @@ data Element = Paragraph Text
     | OListElement [Element]
     | Block [Element]
     | Header Integer String
+
+instance Show Text where
+    show (RawText str) = str
+    show (InlineTag tag elems) = xmlShow 0 tag $ concat $ map show elems
+    show (BlockTag tag elems) = xmlShow 0 tag $ concat $ map show elems
+    show (Sequence elems) = concat $ map show elems
 
 instance Show Element where
     show = show' 0
@@ -209,10 +209,19 @@ document = do
     eof
     return $ Document elems
 
-preprocess input = concat $ map tabTo8 input
+preprocess input = concat $ map tabTo8 $ removeModeline input
     where
         tabTo8 '\t' = "        "
         tabTo8 c = [c]
+        removeModeline = removeModeline' True 0
+        removeModeline' False _ ('\n':xs) = ('\n':removeModeline' True 0 xs)
+        removeModeline' False _ ('\r':xs) = ('\n':removeModeline' True 0 xs)
+        removeModeline' False _ (x:xs) = (x:removeModeline' False 0 xs)
+        removeModeline' True n (x:xs) = if x /= (modeline !! n) then
+                        (take n modeline) ++ [x] ++ (removeModeline' (x `elem` "\r\n") 0 xs)
+                        else (if n == length modeline then removeModeline' True 0 xs else removeModeline' True (n+1) xs)
+        removeModeline' _ _ [] = []
+        modeline = "-*- mode: markup; -*-\n"
 
 parseMarkup :: String -> String
 parseMarkup input =
