@@ -1,13 +1,12 @@
 module Markup where
-
-xmlShow element content = concat $ ["<", element, ">", content, "</", element, ">"]
-xmlEscape [] = []
-xmlEscape ('<':cs) = "&lt;" ++ (xmlEscape cs)
-xmlEscape ('>':cs) = "&gt;" ++ (xmlEscape cs)
-xmlEscape ('&':cs) = "&amp;" ++ (xmlEscape cs)
-xmlEscape (c:cs) = (c:xmlEscape cs)
-
-
+{- * Markup Structure
+ -
+ - The Markup structure shown below and maps directly to the definitions in
+ - the spec.
+ -
+ - The block tags are hard-coded as a list to keep the parsing code simpler,
+ - but you could change this and make it a parameter.
+ -}
 data Text = RawText String
     | LinkWKey String String -- link key
     | Link String -- link
@@ -29,14 +28,6 @@ data Document = Document [Element]
 
 blockTags = ["note"]
 
-{- * Markup Structure
- -
- - The Markup structure is shown above and maps directly to the definitions in
- - the spec.
- -
- - The block tags are hard-coded as a list to keep the parsing code simpler,
- - but you could change this and make it a parameter.
- -}
 
 instance Show Text where
     show (RawText str) = (xmlEscape str)
@@ -60,4 +51,13 @@ instance Show Element where
 
 instance Show Document where
     show (Document es) = xmlShow "body" (concat $ map show es)
+
+
+xmlShow element content = concat $ ["<", element, ">", content, "</", element, ">"]
+xmlEscape [] = []
+xmlEscape ('<':cs) = "&lt;" ++ (xmlEscape cs)
+xmlEscape ('>':cs) = "&gt;" ++ (xmlEscape cs)
+xmlEscape ('&':cs) = "&amp;" ++ (xmlEscape cs)
+xmlEscape (c:cs) = (c:xmlEscape cs)
+
 
