@@ -5,6 +5,7 @@ import System.Environment
 
 main :: IO ()
 main = do
-    input <- readFile "input.mup"
+    args <- getArgs
+    input <- readFile (args !! 0)
     putStrLn $ parseMarkup input
 
