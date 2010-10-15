@@ -95,9 +95,9 @@ rawtext :: CharParser IndentState Text
 rawtext = do
     st <- getState
     if isNested st then
-        many1 (noneOf "}\\\n") >>= (return . RawText)
+        many1 (noneOf "}[\\\n") >>= (return . RawText)
      else
-        many1 (noneOf "\\\n") >>= (return . RawText)
+        many1 (noneOf "[\\\n") >>= (return . RawText)
 
 rawtextinline :: CharParser IndentState Text
 rawtextinline = many1 (noneOf "\\\n}") >>= (return . RawText)
@@ -131,13 +131,24 @@ inlinetext = many (rawtextinline <|> taggedtext) >>= (return . Sequence)
 escapedchar :: CharParser IndentState Text
 escapedchar = (char '\\') >> (oneOf "\\#-") >>= (return . RawText . charToStr)
 
+linktext = do
+    char '['
+    txt <- many (noneOf "|]\n")
+    ((char ']') >> (return $ Link txt)) <|> do
+        char '|'
+        key <- many (noneOf "]\n")
+        char ']'
+        return $ LinkWKey txt key
+
+
 text :: CharParser IndentState Text
 text = do
     lookAhead $ noneOf "* \n"
     first <- (try escapedchar) <|> (return $ RawText "")
-    txt <- many1 (taggedtext <|> rawtext)
+    txt <- many1 (taggedtext <|> linktext <|> rawtext)
     next <- (char '\n' >> (return $ RawText " ")) <|> (return $ RawText "")
     return $ Sequence ((first:txt)++[next])
+
 
 
 paragraph :: CharParser IndentState Element

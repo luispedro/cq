@@ -9,7 +9,8 @@ xmlEscape (c:cs) = (c:xmlEscape cs)
 
 
 data Text = RawText String
-    | LinkText String String -- link key
+    | LinkWKey String String -- link key
+    | Link String -- link
     | InlineTag String [Text] -- tag str
     | BlockTag String [Element] -- tag str
     | Sequence [Text]
@@ -39,6 +40,8 @@ blockTags = ["note"]
 
 instance Show Text where
     show (RawText str) = (xmlEscape str)
+    show (Link txt) = xmlShow "link" $ xmlEscape txt
+    show (LinkWKey txt key) = xmlShow "link" $ concat [(xmlEscape txt), xmlShow "key" (xmlEscape key)]
     show (InlineTag tag elems) = xmlShow tag $ concat $ map show elems
     show (BlockTag tag elems) = xmlShow tag $ concat $ map show elems
     show (Sequence elems) = concat $ map show elems
