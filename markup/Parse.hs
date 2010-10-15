@@ -78,32 +78,39 @@ rawtext = do
 rawtextinline :: CharParser IndentState Text
 rawtextinline = many1 (noneOf "\\\n\r}") >>= (return . RawText)
 
+tagname :: CharParser IndentState String
 tagname = many1 (letter <|> (char '_') <|> (char '.') <|> (char '+'))
+
 taggedtext :: CharParser IndentState Text
 taggedtext = do
     (char '\\')
-    tag <- tagname
-    char '{'
-    if tag == "note" then do
-        push_state
-        par <- paragraph
-        elems <- many element
-        char '}'
-        pop_state
-        return $ BlockTag tag (par:elems)
-     else do
-        Sequence content <- inlinetext
-        char '}'
-        return $ InlineTag tag content
+    ((char '\\') >> (return $ RawText "\\")) <|> do -- if it is followed by a \, then it is an escaped \
+        tag <- tagname
+        char '{'
+        if tag == "note" then do
+            push_state
+            par <- paragraph
+            elems <- many element
+            char '}'
+            pop_state
+            return $ BlockTag tag (par:elems)
+         else do
+            Sequence content <- inlinetext
+            char '}'
+            return $ InlineTag tag content
 
 inlinetext :: CharParser IndentState Text
 inlinetext = many (rawtextinline <|> taggedtext) >>= (return . Sequence)
 
+escapedchar :: CharParser IndentState Text
+escapedchar = (char '\\') >> (oneOf "\\#-[") >>= (\c -> return $ RawText [c])
+
 text :: CharParser IndentState Text
 text = do
     lookAhead $ noneOf " -#*\n\r"
+    first <- (try escapedchar) <|> (return $ RawText "")
     txt <- many1 (taggedtext <|> rawtext)
-    return $ Sequence txt
+    return $ Sequence (first:txt)
 
 
 paragraph :: CharParser IndentState Element
