@@ -199,18 +199,21 @@ preprocess input = concat $ map tabTo8 $ removeModeline $ fixNLs input
     where
         tabTo8 '\t' = "        "
         tabTo8 c = [c]
-        removeModeline = removeModeline' True 0
-        removeModeline' False _ ('\n':xs) = ('\n':removeModeline' True 0 xs)
-        removeModeline' False _ (x:xs) = (x:removeModeline' False 0 xs)
-        removeModeline' True n (x:xs) = if x /= (modeline !! n) then
-                        (take n modeline) ++ [x] ++ (removeModeline' (x == '\n') 0 xs)
-                        else (if n == length modeline then removeModeline' True 0 xs else removeModeline' True (n+1) xs)
-        removeModeline' _ _ [] = []
         fixNLs [] = []
         fixNLs ('\r':'\n':xs) = ('\n':fixNLs xs)
         fixNLs ('\n':'\r':xs) = ('\n':fixNLs xs)
         fixNLs (x:xs) = (x:fixNLs xs)
-        modeline = "-*- mode: markup; -*-\n"
+
+removeModeline :: String -> String
+removeModeline = removeModeline' True 0
+    where
+    removeModeline' False _ ('\n':xs) = ('\n':removeModeline' True 0 xs)
+    removeModeline' False _ (x:xs) = (x:removeModeline' False 0 xs)
+    removeModeline' True n (x:xs) = if x /= (modeline !! n) then
+                    (take n modeline) ++ [x] ++ (removeModeline' (x == '\n') 0 xs)
+                    else (if (n+1)== length modeline then removeModeline' True 0 xs else removeModeline' True (n+1) xs)
+    removeModeline' _ _ [] = []
+    modeline = "-*- mode: markup; -*-\n"
 
 parseMarkup :: String -> Either ParseError Document
 parseMarkup input = runParser document (SimpleIndent 0 False 0) "markup" $ preprocess input
