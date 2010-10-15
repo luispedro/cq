@@ -104,10 +104,12 @@ rawtextinline = many1 (noneOf "\\\n}") >>= (return . RawText)
 tagname :: CharParser IndentState String
 tagname = many1 (letter <|> (char '_') <|> (char '.') <|> (char '+'))
 
+charToStr c = [c]
+
 taggedtext :: CharParser IndentState Text
 taggedtext = do
     (char '\\')
-    ((char '\\') >> (return $ RawText "\\")) <|> do -- if it is followed by a \, then it is an escaped \
+    ((oneOf "\\{}[]") >>= (return . RawText . charToStr)) <|> do -- if it is followed by a \, then it is an escaped \
         tag <- tagname
         char '{'
         if tag `elem` blockTags then do
@@ -126,7 +128,7 @@ inlinetext :: CharParser IndentState Text
 inlinetext = many (rawtextinline <|> taggedtext) >>= (return . Sequence)
 
 escapedchar :: CharParser IndentState Text
-escapedchar = (char '\\') >> (oneOf "\\#-[") >>= (\c -> return $ RawText [c])
+escapedchar = (char '\\') >> (oneOf "\\#-") >>= (return . RawText . charToStr)
 
 text :: CharParser IndentState Text
 text = do
