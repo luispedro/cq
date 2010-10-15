@@ -38,9 +38,9 @@ push_indent n = updateState $ push_indent' n
 pop_indent n = updateState $ pop_indent' n
     where pop_indent' n (SimpleIndent x s lv) = (SimpleIndent (x-n) s lv)
 push_state = updateState push_state'
-    where push_state' (SimpleIndent i _ n) = SimpleIndent i True (n+1)
+    where push_state' (SimpleIndent i st n) = SimpleIndent i True (n+1)
 pop_state = updateState pop_state'
-    where pop_state' (SimpleIndent i _ n) = SimpleIndent i True (n-1)
+    where pop_state' (SimpleIndent i st n) = SimpleIndent i st (n-1)
 
 isNested (SimpleIndent _ _ 0) = False
 isNested (SimpleIndent _ _ n) = True
