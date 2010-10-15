@@ -5,6 +5,12 @@ import XML (xmlShow)
 import Debug.Trace
 tracex x = trace (show x) x
 
+data Text = RawText String
+    | LinkText String String -- link key
+    | InlineTag String String -- tag str
+    | BlockTag String String -- tag str
+    | Sequence [Text]
+
 data Element = Paragraph String
     | Verbatim String
     | UList [Element]
@@ -82,9 +88,11 @@ indentedline :: CharParser IndentState String
 indentedline = do
     curindent
     first <- noneOf " -#*\n\r"
-    rest <- many (noneOf "\r\n")
+    rest <- text
     eofl
     return (first:rest)
+
+text = many (noneOf "\r\n")
 
 join [] = ""
 join xs = foldr1 (++) xs
