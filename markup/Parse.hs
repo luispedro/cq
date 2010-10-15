@@ -51,7 +51,7 @@ eol = (char '\n')
 eofl = do -- end of file or line
     st <- getState
     if isNested st then
-        eol <|> (lookAhead (char '}'))
+        eol <|> ((lookAhead (char '}')) >> return '\n')
      else
         eol <|> (eof >> return '\n')
 
