@@ -14,7 +14,7 @@ tracex x = trace (show x) x
 checkParsed (Left _) = False
 checkParsed (Right _) = True
 
-tests = TestList [indentline, indentline_empty, indentline_space, indentline_space2, t_emptyline, t_paragraph, t_text, text_br, text_br_inner, indentline_br_inner, many_indentline_br_inner, note, note_bad, indentline_br_inner_fail, many_indentline_br_inner_fail, many_indentline_br_inner_no_consume_all, many_indentline_br,indentline_br,many_indentline_br_inner_no_input, indentline_br_inner_no_input  ]
+tests = TestList [indentline, indentline_empty, indentline_space, indentline_space2, t_emptyline, t_paragraph, t_text, text_br, text_br_inner, indentline_br_inner, many_indentline_br_inner, note, note_bad, indentline_br_inner_fail, many_indentline_br_inner_fail, many_indentline_br_inner_no_consume_all, many_indentline_br,indentline_br,many_indentline_br_inner_no_input, indentline_br_inner_no_input  ,h1,h2,h3,h3wcontent,h2wcontent]
     where
     indentline_space = TestCase (assertBool "parse fails (match below)" $ not $ checkParsed pres)
         where
@@ -95,6 +95,26 @@ tests = TestList [indentline, indentline_empty, indentline_space, indentline_spa
     note_bad = TestCase (assertBool "NOT taggedtext[[ \\note Test Me ]]" $ not $ checkParsed pres)
         where
         pres = (runParser (taggedtext >> eof) (SimpleIndent 0 False 0) "test" "\\note Test Me")
+
+    h1 = TestCase (assertBool "headermarker >> eof[[ *  ]]" $ checkParsed pres)
+        where
+        pres = (runParser (headermarker >> eof) (SimpleIndent 0 False 0) "test" "* ")
+
+    h2 = TestCase (assertBool "headermarker >> eof[[ **  ]]" $ checkParsed pres)
+        where
+        pres = (runParser (headermarker >> eof) (SimpleIndent 0 False 0) "test" "** ")
+
+    h3 = TestCase (assertBool "headermarker >> eof[[ ***  ]]" $ checkParsed pres)
+        where
+        pres = (runParser (headermarker >> eof) (SimpleIndent 0 False 0) "test" "*** ")
+
+    h2wcontent = TestCase (assertBool "header >> eof[[ ** My header ]]" $ checkParsed pres)
+        where
+        pres = (runParser (header >> eof) (SimpleIndent 0 False 0) "test" "** My header")
+
+    h3wcontent = TestCase (assertBool "header >> eof[[ *** My header ]]" $ checkParsed pres)
+        where
+        pres = (runParser (header >> eof) (SimpleIndent 0 False 0) "test" "*** My header")
 
 main = runTestTT tests
 
