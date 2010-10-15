@@ -1,6 +1,7 @@
 module Markup where
 
 import Text.ParserCombinators.Parsec
+import XML (xmlShow)
 import Debug.Trace
 tracex x = trace (show x) x
 
@@ -11,15 +12,19 @@ data Element = Paragraph String
     | UListElement [Element]
     | OListElement [Element]
     | Block [Element]
+    | Header Integer String
 
 instance Show Element where
-    show (Paragraph str) = "<p>" ++ str ++ "</p>"
-    show (Verbatim str) = "<pre>" ++ str ++ "</pre>"
-    show (UList elems) = "<ul>" ++ (join $map show elems) ++ "</ul>"
-    show (UListElement elems) = "<li>" ++ (join $map show elems) ++ "</li>"
-    show (OList elems) = "<ol>" ++ (join $map show elems) ++ "</ol>"
-    show (OListElement elems) = "<li>" ++ (join $map show elems) ++ "</li>"
-    show (Block elems) = "<blockquote>" ++ (join $ map show elems) ++ "</blockquote>"
+    show = show' 0
+        where
+        show' n (Paragraph str) = xmlShow n "p" str
+        show' n (Verbatim str) = xmlShow n "pre" str
+        show' n (UList elems) = xmlShow n "ul" (join $ map (show' (n+1)) elems)
+        show' n (UListElement elems) = xmlShow n "li" (join $map (show' (n+1)) elems)
+        show' n (OList elems) = xmlShow n "ol" (join $map (show' (n+1)) elems)
+        show' n (OListElement elems) = xmlShow n "li" (join $map (show' (n+1)) elems)
+        show' n (Block elems) = xmlShow n "blockquote" (join $ map (show' (n+1)) elems)
+        show' n (Header hl str) = xmlShow n ("h" ++ (show hl)) str
 
 data Document = Document [Element]
 
@@ -31,7 +36,8 @@ data IndentState = SimpleIndent Integer Bool
 eol = try (string "\r\n" >> return '\n')
     <|> (string "\r" >> return '\n')
     <|> (string "\n" >> return '\n')
-    <|> (eof >> return '\n') -- This always terminates the last line in the file
+
+eofl = eol  <|> (eof >> return '\n') -- This always terminates the last line in the file
 
 
 charToString :: Char -> Parser String
@@ -70,14 +76,14 @@ pop_indent :: Integer  -> CharParser IndentState ()
 pop_indent n = updateState (\(SimpleIndent x s) -> (SimpleIndent (x-n) s))
 
 emptyline :: CharParser IndentState ()
-emptyline = (many (char ' ') >> eol >> return ())
+emptyline = (many (char ' ')) >> eol >> return ()
 
 indentedline :: CharParser IndentState String
 indentedline = do
     curindent
     first <- noneOf " -#*\n\r"
     rest <- many (noneOf "\r\n")
-    eol
+    eofl
     return (first:rest)
 
 join [] = ""
@@ -117,14 +123,23 @@ ulistelem = metablock uliststart UListElement
 olist = (many1 olistelem) >>= (return . OList)
 ulist = (many1 ulistelem) >>= (return . UList)
 
+header = do
+    curindent
+    n <- headermarker
+    rest <- many (noneOf "\r\n")
+    eofl
+    return $ Header n rest
 
 element :: CharParser IndentState Element
 element = do
+    many (try emptyline)
     (try block)
     <|> (try paragraph)
     <|> (try olist)
     <|> (try ulist)
     <|> (try verbatim)
+    <|> (try header)
+
 
 document :: CharParser IndentState Document
 document = do
