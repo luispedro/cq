@@ -16,6 +16,7 @@ data Element = Paragraph Text
     | OListElement [Element]
     | Block [Element]
     | Header Integer String
+    | LinkDef String String
 
 data Document = Document [Element]
 
@@ -47,6 +48,7 @@ instance Show Element where
         show' n (OListElement elems) = xmlShow n "li" (concat $map (show' (n+1)) elems)
         show' n (Block elems) = xmlShow n "blockquote" (concat $ map (show' (n+1)) elems)
         show' n (Header hl str) = xmlShow n ("h" ++ (show hl)) str
+        show' n (LinkDef link url) = xmlShow n "link_def" $ concat [xmlShow (n+1) "link" link, xmlShow (n+1) "url" url]
 
 
 instance Show Document where

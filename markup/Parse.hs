@@ -142,6 +142,7 @@ text = do
 
 paragraph :: CharParser IndentState Element
 paragraph = do
+    notFollowedBy (linkdef >> eofl)
     lines <- many1 $ try indentedline
     optional emptyline
     return $ Paragraph $ Sequence lines
@@ -154,7 +155,6 @@ verbatimline = do {
 
 verbatim = do
     verbatimstart
-    -- notFollowedBy (char ' ') This seemed reasonable to me, but it's contradicted by one of the test cases.
     push_indent 3
     lines <- many verbatimline
     pop_indent 3
@@ -163,7 +163,6 @@ verbatim = do
 
 metablock n starter constructor = do
     starter
-    -- notFollowedBy (char ' ')
     push_indent n
     elems <- many1 (skipemptylines >> element)
     pop_indent n
@@ -187,12 +186,24 @@ header = do
     rest <- manyTill anyChar eofl
     return $ Header n rest
 
+linkdef = do
+    char '['
+    key <- many (noneOf "]\n")
+    char ']'
+    skipMany (char ' ')
+    char '<'
+    url <- many (noneOf ">")
+    char '>'
+    skipMany (char ' ')
+    eofl
+    return $ LinkDef key url
+
 element :: CharParser IndentState Element
 element = do
     (try paragraph)
     <|> do
         curindent
-        header <|> olist <|> ulist <|> verbatim <|> block
+        header <|> olist <|> ulist <|> linkdef <|> verbatim <|> block
 
 
 document :: CharParser IndentState Document
@@ -200,6 +211,10 @@ document = do
     elems <- many $ skipemptylines >> element
     skipemptylines >> eof
     return $ Document elems
+
+
+
+
 
 preprocess input = concat $ map tabTo8 $ removeModeline $ fixNLs input
     where
