@@ -7,7 +7,9 @@ stands for enumFromThen 1 3 (see §3.10 for the formal translation). We can now
 [Red .. Violet] => [Red, Green, Blue, Indigo, Violet] 
 
   Note that such a sequence is arithmetic in the sense that the increment between
-  convert between Int and a type in Enum.
+  convert between Int and a type in Enum. And now a \note{With some text in it}
+
+  And a second paragraph.} and then it continues
 
   This continues here.
   and here

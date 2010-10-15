@@ -46,10 +46,14 @@ instance Show Document where
 data IndentState = SimpleIndent Integer Bool Integer
 
 eol = try (string "\r\n" >> return '\n')
-    <|> (string "\r" >> return '\n')
-    <|> (string "\n" >> return '\n')
+    <|> (char '\r') <|> (char '\n')
 
-eofl = eol  <|> (eof >> return '\n') -- This always terminates the last line in the file
+eofl = do
+    st <- getState
+    if (nestLevelOf st) == 0 then
+        eol  <|> (eof >> return '\n') -- This always terminates the last line in the file
+     else
+        eol <|> (lookAhead (char '}'))
 
 
 charToString :: Char -> Parser String
@@ -88,8 +92,12 @@ push_indent n = do
 pop_indent :: Integer  -> CharParser IndentState ()
 pop_indent n = updateState (\(SimpleIndent x s lv) -> (SimpleIndent (x-n) s lv))
 
-push_state (SimpleIndent i _ n) = SimpleIndent i True (n+1)
-pop_state (SimpleIndent i _ n) = SimpleIndent i True (n-1)
+push_state = updateState push_state'
+    where
+    push_state' (SimpleIndent i _ n) = SimpleIndent i True (n+1)
+pop_state = updateState pop_state'
+    where
+    pop_state' (SimpleIndent i _ n) = SimpleIndent i True (n-1)
 nestLevelOf (SimpleIndent _ _ n) = n
 
 emptyline :: CharParser IndentState ()
@@ -106,7 +114,7 @@ indentedline = do
 rawtext :: CharParser IndentState Text
 rawtext = do
     st <- getState
-    if nestLevelOf st > 0 then
+    if nestLevelOf st == 0 then
         many1 (noneOf "\\\n\r") >>= (return . RawText)
      else
         many1 (noneOf "}\\\n\r") >>= (return . RawText)
@@ -115,28 +123,36 @@ rawtextinline :: CharParser IndentState Text
 rawtextinline = many1 (noneOf "\\\n\r}") >>= (return . RawText)
 
 tagname = many1 (letter <|> (char '_') <|> (char '.') <|> (char '+'))
-inlinenote :: CharParser IndentState Text
-inlinenote = do
+taggedtext :: CharParser IndentState Text
+taggedtext = do
     (char '\\')
     tag <- tagname
     char '{'
-    Sequence content <- inlinetext
-    char '}'
-    return $ InlineTag tag content
+    if tag == "note" then do
+        push_state
+        par <- paragraph
+        -- elems <- many element
+        char '}'
+        pop_state
+        return $ BlockTag tag [par] -- (par:elems)
+     else do
+        Sequence content <- inlinetext
+        char '}'
+        return $ InlineTag tag content
 
 inlinetext :: CharParser IndentState Text
-inlinetext = many (rawtextinline <|> inlinenote) >>= (return . Sequence)
+inlinetext = many (rawtextinline <|> taggedtext) >>= (return . Sequence)
 
 text :: CharParser IndentState Text
 text = do
-    first <- noneOf " -#*\n\r"
-    rest <- many (inlinenote <|> rawtext)
-    return $ Sequence (RawText [first]:rest)
+    lookAhead $ noneOf " -#*\n\r"
+    txt <- many1 (taggedtext <|> rawtext)
+    return $ Sequence txt
 
 
 paragraph :: CharParser IndentState Element
 paragraph = do
-    lines <- many1 indentedline
+    lines <- many1 $ try indentedline
     optional emptyline
     return $ Paragraph $ Sequence lines
 
