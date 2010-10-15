@@ -56,9 +56,10 @@ separate function which takes advantage of Haskell's laziness made of the rest
 of the code much easier.
 
 Finally, this was my first larger piece of code in Haskell (I started learning
-it a few weeks back), so I was still struggling with it: for a while I hadn't
-realised that my unit tests weren't running because I wasn't forcing
-evaluation! So it all passed even when the main programme seemed broken.
+it a few weeks back by working on Project Euler), so I was still struggling
+with it: for a while I hadn't realised that my unit tests weren't running
+because I wasn't forcing evaluation! So it all passed even when the main
+programme seemed broken.
 
 ** Author
 
