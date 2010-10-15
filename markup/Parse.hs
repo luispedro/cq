@@ -86,7 +86,6 @@ indentedline :: CharParser IndentState Text
 indentedline = do
     curindent
     t <- text
-    eofl
     return t
 
 
@@ -133,7 +132,8 @@ text = do
     lookAhead $ noneOf " -#*\n\r"
     first <- (try escapedchar) <|> (return $ RawText "")
     txt <- many1 (taggedtext <|> rawtext)
-    return $ Sequence (first:txt)
+    next <- (char '\n' >> (return $ RawText " ")) <|> (return $ RawText "")
+    return $ Sequence ((first:txt)++[next])
 
 
 paragraph :: CharParser IndentState Element
@@ -144,9 +144,9 @@ paragraph = do
 
 verbatimline = do {
             curindent
-          ; text <- many (noneOf "\r\n")
+          ; vtext <- many (noneOf "\n")
           ; eofl
-          ; return text
+          ; return vtext
         } <|> (try $ (emptyline >> (return "")))
 
 verbatim = do
