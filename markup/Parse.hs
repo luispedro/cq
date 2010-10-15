@@ -28,9 +28,9 @@ eol = (char '\n')
 eofl = do
     st <- getState
     if isNested st then
-        eol <|> (eof >> return '\n') -- This always terminates the last line in the file
-     else
         eol <|> (lookAhead (char '}'))
+     else
+        eol <|> (eof >> return '\n') -- This always terminates the last line in the file
 
 headermarker :: CharParser IndentState Integer
 headermarker = (char '*' >> headermarker' 1)
@@ -71,9 +71,9 @@ rawtext :: CharParser IndentState Text
 rawtext = do
     st <- getState
     if isNested st then
-        many1 (noneOf "\\\n\r") >>= (return . RawText)
-     else
         many1 (noneOf "}\\\n\r") >>= (return . RawText)
+     else
+        many1 (noneOf "\\\n\r") >>= (return . RawText)
 
 rawtextinline :: CharParser IndentState Text
 rawtextinline = many1 (noneOf "\\\n\r}") >>= (return . RawText)
