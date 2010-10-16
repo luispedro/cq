@@ -46,7 +46,9 @@ isNested (SimpleIndent _ _ 0) = False
 isNested (SimpleIndent _ _ n) = True
 
 
-
+--
+-- Parsing
+--
 
 eol = (char '\n')
 eofl = do -- end of file or line
@@ -60,24 +62,20 @@ headermarker :: CharParser IndentState Integer
 headermarker = (char '*' >> headermarker' 1)
     where headermarker' n = (char '*' >> (headermarker' (n+1))) <|> (char ' ' >> (return n)) <|> (return n) -- allow for "**Header" to parse correctly
 
-indent :: Integer -> CharParser IndentState ()
-indent n = (count (fromInteger n) (char ' ')) >> (return ())
 
-oliststart :: CharParser IndentState ()
-oliststart = try $ (string "  # ") >> return ()
-uliststart :: CharParser IndentState ()
-uliststart = try $ (string "  - ") >> return ()
-verbatimstart = try $ indent 3
-blockstart = try $ indent 2
+oliststart = try $ string "  # "
+uliststart = try $ string "  - "
+verbatimstart = try $ string "   "
+blockstart = try $ string "  "
 
 curindent :: CharParser IndentState ()
 curindent = try $ do
         st <- getState
-        ignore st
+        curindent' st
     where
-        ignore :: IndentState -> CharParser IndentState ()
-        ignore (SimpleIndent _ True _) = updateState noIgnoreNext
-        ignore (SimpleIndent n False _) = indent n
+    curindent' :: IndentState -> CharParser IndentState ()
+    curindent' (SimpleIndent _ True _) = updateState noIgnoreNext
+    curindent' (SimpleIndent n False _) = (count (fromInteger n) (char ' ')) >> (return ())
 
 
 emptyline :: CharParser IndentState ()
@@ -224,17 +222,18 @@ document = do
     return $ Document elems
 
 
-
-
+--
+-- Preprocessing
+--
 
 preprocess input = concat $ map tabTo8 $ removeModeline $ fixNLs input
     where
-        tabTo8 '\t' = "        "
-        tabTo8 c = [c]
-        fixNLs [] = []
-        fixNLs ('\r':'\n':xs) = ('\n':fixNLs xs)
-        fixNLs ('\n':'\r':xs) = ('\n':fixNLs xs)
-        fixNLs (x:xs) = (x:fixNLs xs)
+    tabTo8 '\t' = "        "
+    tabTo8 c = [c]
+    fixNLs [] = []
+    fixNLs ('\r':'\n':xs) = ('\n':fixNLs xs)
+    fixNLs ('\n':'\r':xs) = ('\n':fixNLs xs)
+    fixNLs (x:xs) = (x:fixNLs xs)
 
 removeModeline :: String -> String
 removeModeline = removeModeline' True 0
@@ -246,6 +245,10 @@ removeModeline = removeModeline' True 0
                     else (if (n+1)== length modeline then removeModeline' True 0 xs else removeModeline' True (n+1) xs)
     removeModeline' _ _ [] = []
     modeline = "-*- mode: markup; -*-\n"
+
+--
+-- Entry Point
+--
 
 parseMarkup :: String -> Either ParseError Document
 parseMarkup input = runParser document (SimpleIndent 0 False 0) "markup" $ preprocess input
