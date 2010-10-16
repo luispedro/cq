@@ -61,6 +61,10 @@ with it: for a while I hadn't realised that my unit tests weren't running
 because I wasn't forcing evaluation! So it all passed even when the main
 programme seemed broken.
 
+According to my time tracker, I spent exactly 7 hours on this project over the
+last 3 days. This does not count the time when I was thinking about this on the
+way to lunch and finally realised that the two parser solution was idiotic.
+
 ** Author
 
 Luis Pedro Coelho <luis@luispedro.org>
