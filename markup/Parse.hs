@@ -29,21 +29,19 @@ import Text.ParserCombinators.Parsec
  -   (whether we have already consumed the current line's indentation)
  -   (nesting level [for \note{} style tags]
  -}
-data IndentState = SimpleIndent Integer Bool Integer
+data IndentState = IndentState  { indentLevel :: Integer
+                                , ignoreNext :: Bool
+                                , nestLevel :: Integer } deriving (Show)
 
-noIgnoreNext (SimpleIndent n True lv) = SimpleIndent n False lv
-
+noIgnoreNext st = st {ignoreNext = False}
 push_indent n = updateState $ push_indent' n
-    where push_indent' n (SimpleIndent x _ lv) = (SimpleIndent (x+n) True lv)
+    where push_indent' n st = st { ignoreNext = True, indentLevel = (+n) $ indentLevel st}
 pop_indent n = updateState $ pop_indent' n
-    where pop_indent' n (SimpleIndent x s lv) = (SimpleIndent (x-n) s lv)
+    where pop_indent' n st = st { indentLevel = (+ (-n)) $ indentLevel st}
 push_state = updateState push_state'
-    where push_state' (SimpleIndent i st n) = SimpleIndent i True (n+1)
+    where push_state' st = st { ignoreNext = True, nestLevel = (+1) $ nestLevel st}
 pop_state = updateState pop_state'
-    where pop_state' (SimpleIndent i st n) = SimpleIndent i st (n-1)
-
-isNested (SimpleIndent _ _ 0) = False
-isNested (SimpleIndent _ _ n) = True
+    where pop_state' st = st { nestLevel = (+ (-1)) $ nestLevel st}
 
 
 --
@@ -53,7 +51,7 @@ isNested (SimpleIndent _ _ n) = True
 eol = (char '\n')
 eofl = do -- end of file or line
     st <- getState
-    if isNested st then
+    if (nestLevel st) > 0 then
         eol <|> ((lookAhead (char '}')) >> return '\n')
      else
         eol <|> (eof >> return '\n')
@@ -74,8 +72,8 @@ curindent = try $ do
         curindent' st
     where
     curindent' :: IndentState -> CharParser IndentState ()
-    curindent' (SimpleIndent _ True _) = updateState noIgnoreNext
-    curindent' (SimpleIndent n False _) = (count (fromInteger n) (char ' ')) >> (return ())
+    curindent' (IndentState  _ True _) = updateState noIgnoreNext
+    curindent' (IndentState  n False _) = (count (fromInteger n) (char ' ')) >> (return ())
 
 
 emptyline :: CharParser IndentState ()
@@ -92,7 +90,7 @@ indentedline = do
 rawtext :: CharParser IndentState Text
 rawtext = do
     st <- getState
-    if isNested st then
+    if (nestLevel st) > 0 then
         many1 (noneOf "}[\\\n") >>= (return . RawText)
      else
         many1 (noneOf "[\\\n") >>= (return . RawText)
@@ -251,5 +249,5 @@ removeModeline = removeModeline' True 0
 --
 
 parseMarkup :: String -> Either ParseError Document
-parseMarkup input = runParser document (SimpleIndent 0 False 0) "markup" $ preprocess input
+parseMarkup input = runParser document (IndentState  0 False 0) "markup" $ preprocess input
 

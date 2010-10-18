@@ -7,7 +7,7 @@ import Parse
 import Debug.Trace
 
 parseJust :: CharParser IndentState tk -> String -> Either ParseError tk
-parseJust parser input = (runParser parser (SimpleIndent 0 False 0) "test" input)
+parseJust parser input = (runParser parser (IndentState 0 False 0) "test" input)
 
 tracex x = trace (show x) x
 
@@ -50,87 +50,87 @@ tests = TestList [indentline, indentline_empty, indentline_space, indentline_spa
 
     text_br_inner = TestCase (assertBool "parse matches below" $ checkParsed pres)
         where
-        pres = (runParser (text >> char '}' >> eof) (SimpleIndent 0 False 1) "test" "one}")
+        pres = (runParser (text >> char '}' >> eof) (IndentState 0 False 1) "test" "one}")
 
     indentline_br_inner = TestCase (assertBool "parse matches below" $ checkParsed pres)
         where
-        pres = (runParser (indentedline >> char '}' >> eof) (SimpleIndent 0 False 1) "test" "one}")
+        pres = (runParser (indentedline >> char '}' >> eof) (IndentState 0 False 1) "test" "one}")
 
     indentline_br_inner_fail = TestCase (assertBool "NOT indentline[[ '}' ]]" $ not $ checkParsed pres)
         where
-        pres = (runParser (indentedline >> eof) (SimpleIndent 0 False 1) "}" "one}")
+        pres = (runParser (indentedline >> eof) (IndentState 0 False 1) "}" "one}")
 
     many_indentline_br_inner_fail = TestCase (assertBool "NOT many indentline[[ '}' ]]" $ not $ checkParsed pres)
         where
-        pres = (runParser ((many indentedline) >> eof) (SimpleIndent 0 False 1) "}" "one}")
+        pres = (runParser ((many indentedline) >> eof) (IndentState 0 False 1) "}" "one}")
 
     many_indentline_br_inner_no_consume_all = TestCase (assertBool "NOT (many1 $ try indentedline) >> eof [[ one} ]]" $ not $ checkParsed pres)
         where
-        pres = (runParser ((many1 $ try indentedline) >> eof) (SimpleIndent 0 False 1) "test" "one}")
+        pres = (runParser ((many1 $ try indentedline) >> eof) (IndentState 0 False 1) "test" "one}")
 
     many_indentline_br = TestCase (assertBool "(many1 $ try indentedline) [[ one} ]]" $ checkParsed pres)
         where
-        pres = (runParser ((many1 $ try indentedline)) (SimpleIndent 0 False 1) "test" "one}")
+        pres = (runParser ((many1 $ try indentedline)) (IndentState 0 False 1) "test" "one}")
 
     indentline_br = TestCase (assertBool "indentedline [[ one} ]]" $ checkParsed pres)
         where
-        pres = (runParser indentedline (SimpleIndent 0 False 1) "test" "one}")
+        pres = (runParser indentedline (IndentState 0 False 1) "test" "one}")
 
     many_indentline_br_inner = TestCase (assertBool "(many $ try indentedline) >> (char '}') >> eof [[ one} ]]" $ checkParsed pres)
         where
-        pres = (runParser ((many $ try indentedline) >> char '}' >> eof) (SimpleIndent 0 False 1) "test" "one}")
+        pres = (runParser ((many $ try indentedline) >> char '}' >> eof) (IndentState 0 False 1) "test" "one}")
 
     many_indentline_br_inner_no_input = TestCase (assertBool "(many $try indentedline) >> (char '}') >> eof [[ } ]]" $ checkParsed pres)
         where
-        pres = (runParser ((many $ try indentedline) >> char '}' >> eof) (SimpleIndent 0 False 1) "test" "}")
+        pres = (runParser ((many $ try indentedline) >> char '}' >> eof) (IndentState 0 False 1) "test" "}")
 
     indentline_br_inner_no_input = TestCase (assertBool "NOT indentedline >> (char '}') >> eof [[ } ]]" $ not $ checkParsed pres)
         where
-        pres = (runParser (indentedline >> char '}' >> eof) (SimpleIndent 0 False 1) "test" "}")
+        pres = (runParser (indentedline >> char '}' >> eof) (IndentState 0 False 1) "test" "}")
 
     note = TestCase (assertBool "taggedtext[[ \\note{Test Me} ]]" (checkParsed pres))
         where
-        pres = (runParser (taggedtext >> eof) (SimpleIndent 0 False 0) "test" "\\note{Test Me}")
+        pres = (runParser (taggedtext >> eof) (IndentState 0 False 0) "test" "\\note{Test Me}")
 
     note_bad = TestCase (assertBool "NOT taggedtext[[ \\note Test Me ]]" $ not $ checkParsed pres)
         where
-        pres = (runParser (taggedtext >> eof) (SimpleIndent 0 False 0) "test" "\\note Test Me")
+        pres = (runParser (taggedtext >> eof) (IndentState 0 False 0) "test" "\\note Test Me")
 
     h1 = TestCase (assertBool "headermarker >> eof[[ *  ]]" $ checkParsed pres)
         where
-        pres = (runParser (headermarker >> eof) (SimpleIndent 0 False 0) "test" "* ")
+        pres = (runParser (headermarker >> eof) (IndentState 0 False 0) "test" "* ")
 
     h2 = TestCase (assertBool "headermarker >> eof[[ **  ]]" $ checkParsed pres)
         where
-        pres = (runParser (headermarker >> eof) (SimpleIndent 0 False 0) "test" "** ")
+        pres = (runParser (headermarker >> eof) (IndentState 0 False 0) "test" "** ")
 
     h3 = TestCase (assertBool "headermarker >> eof[[ ***  ]]" $ checkParsed pres)
         where
-        pres = (runParser (headermarker >> eof) (SimpleIndent 0 False 0) "test" "*** ")
+        pres = (runParser (headermarker >> eof) (IndentState 0 False 0) "test" "*** ")
 
     h2wcontent = TestCase (assertBool "header >> eof[[ ** My header ]]" $ checkParsed pres)
         where
-        pres = (runParser (header >> eof) (SimpleIndent 0 False 0) "test" "** My header")
+        pres = (runParser (header >> eof) (IndentState 0 False 0) "test" "** My header")
 
     h3wcontent = TestCase (assertBool "header >> eof[[ *** My header ]]" $ checkParsed pres)
         where
-        pres = (runParser (header >> eof) (SimpleIndent 0 False 0) "test" "*** My header")
+        pres = (runParser (header >> eof) (IndentState 0 False 0) "test" "*** My header")
 
     t_escapedchar = TestCase (assertBool "escapedchar >> eof[ \\\\ ]]" $ checkParsed pres)
         where
-        pres = (runParser (escapedchar >> eof) (SimpleIndent 0 False 0) "test" "\\\\")
+        pres = (runParser (escapedchar >> eof) (IndentState 0 False 0) "test" "\\\\")
 
     t_escapedchar_not = TestCase (assertBool "NOT escapedchar >> eof[ \\other ]]"$ not $ checkParsed pres)
         where
-        pres = (runParser (escapedchar >> eof) (SimpleIndent 0 False 0) "test" "\\other")
+        pres = (runParser (escapedchar >> eof) (IndentState 0 False 0) "test" "\\other")
 
     t_olistelem = TestCase (assertBool "olistelem >> eof[   # olist\\n ]]"$ checkParsed pres)
         where
-        pres = (runParser (olistelem >> eof) (SimpleIndent 0 False 0) "test" "  # olist\n")
+        pres = (runParser (olistelem >> eof) (IndentState 0 False 0) "test" "  # olist\n")
 
     t_olist = TestCase (assertBool "olist >> eof[   # olist\\n  # olist2\\n ]]"$ checkParsed pres)
         where
-        pres = (runParser (olist >> eof) (SimpleIndent 0 False 0) "test" "  # olist\n  # olist2")
+        pres = (runParser (olist >> eof) (IndentState 0 False 0) "test" "  # olist\n  # olist2")
 
 main = runTestTT tests
 
