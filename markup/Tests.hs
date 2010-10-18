@@ -36,9 +36,9 @@ tests = TestList [indentline, indentline_empty, indentline_space, indentline_spa
         where
         pres = (parseJust text "xxxas")
 
-    t_paragraph = TestCase (assertBool "parse matches below" $ checkParsed pres)
+    t_paragraph = TestCase (assertBool "paragraph[ 1\\n2\\n... ]" $ checkParsed pres)
         where
-        pres = (parseJust paragraph "one\ntwo\nthree\nfour\n\n  four\n  five\n")
+        pres = (parseJust (paragraph >>eof) "one\ntwo\nthree\nfour\n")
 
     t_text = TestCase (assertBool "parse matches below" $ checkParsed pres)
         where
