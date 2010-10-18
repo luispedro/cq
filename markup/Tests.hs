@@ -18,15 +18,15 @@ tests = TestList [indentline, indentline_empty, indentline_space, indentline_spa
     where
     indentline_space = TestCase (assertBool "parse fails (match below)" $ not $ checkParsed pres)
         where
-        pres = (parseJust indentedline "  ")
+        pres = (parseJust text "  ")
 
     indentline_space2 = TestCase (assertBool "parse fails" $ not $ checkParsed pres)
         where
-        pres = (parseJust indentedline "  x")
+        pres = (parseJust text "  x")
 
     indentline_empty = TestCase (assertBool "parse fails (match below)" $ not $ checkParsed pres)
         where
-        pres = (parseJust indentedline "")
+        pres = (parseJust text "")
 
     t_emptyline = TestCase (assertBool "parse matches below" $ checkParsed pres)
         where
@@ -34,7 +34,7 @@ tests = TestList [indentline, indentline_empty, indentline_space, indentline_spa
 
     indentline = TestCase (assertBool "parse matches below" $ checkParsed pres)
         where
-        pres = (parseJust indentedline "xxxas")
+        pres = (parseJust text "xxxas")
 
     t_paragraph = TestCase (assertBool "parse matches below" $ checkParsed pres)
         where
@@ -54,39 +54,39 @@ tests = TestList [indentline, indentline_empty, indentline_space, indentline_spa
 
     indentline_br_inner = TestCase (assertBool "parse matches below" $ checkParsed pres)
         where
-        pres = (runParser (indentedline >> char '}' >> eof) (IndentState 0 False 1) "test" "one}")
+        pres = (runParser (text >> char '}' >> eof) (IndentState 0 False 1) "test" "one}")
 
     indentline_br_inner_fail = TestCase (assertBool "NOT indentline[[ '}' ]]" $ not $ checkParsed pres)
         where
-        pres = (runParser (indentedline >> eof) (IndentState 0 False 1) "}" "one}")
+        pres = (runParser (text >> eof) (IndentState 0 False 1) "}" "one}")
 
     many_indentline_br_inner_fail = TestCase (assertBool "NOT many indentline[[ '}' ]]" $ not $ checkParsed pres)
         where
-        pres = (runParser ((many indentedline) >> eof) (IndentState 0 False 1) "}" "one}")
+        pres = (runParser ((many text) >> eof) (IndentState 0 False 1) "}" "one}")
 
-    many_indentline_br_inner_no_consume_all = TestCase (assertBool "NOT (many1 $ try indentedline) >> eof [[ one} ]]" $ not $ checkParsed pres)
+    many_indentline_br_inner_no_consume_all = TestCase (assertBool "NOT (many1 $ try text) >> eof [[ one} ]]" $ not $ checkParsed pres)
         where
-        pres = (runParser ((many1 $ try indentedline) >> eof) (IndentState 0 False 1) "test" "one}")
+        pres = (runParser ((many1 $ try text) >> eof) (IndentState 0 False 1) "test" "one}")
 
-    many_indentline_br = TestCase (assertBool "(many1 $ try indentedline) [[ one} ]]" $ checkParsed pres)
+    many_indentline_br = TestCase (assertBool "(many1 $ try text) [[ one} ]]" $ checkParsed pres)
         where
-        pres = (runParser ((many1 $ try indentedline)) (IndentState 0 False 1) "test" "one}")
+        pres = (runParser ((many1 $ try text)) (IndentState 0 False 1) "test" "one}")
 
-    indentline_br = TestCase (assertBool "indentedline [[ one} ]]" $ checkParsed pres)
+    indentline_br = TestCase (assertBool "text [[ one} ]]" $ checkParsed pres)
         where
-        pres = (runParser indentedline (IndentState 0 False 1) "test" "one}")
+        pres = (runParser text (IndentState 0 False 1) "test" "one}")
 
-    many_indentline_br_inner = TestCase (assertBool "(many $ try indentedline) >> (char '}') >> eof [[ one} ]]" $ checkParsed pres)
+    many_indentline_br_inner = TestCase (assertBool "(many $ try text) >> (char '}') >> eof [[ one} ]]" $ checkParsed pres)
         where
-        pres = (runParser ((many $ try indentedline) >> char '}' >> eof) (IndentState 0 False 1) "test" "one}")
+        pres = (runParser ((many $ try text) >> char '}' >> eof) (IndentState 0 False 1) "test" "one}")
 
-    many_indentline_br_inner_no_input = TestCase (assertBool "(many $try indentedline) >> (char '}') >> eof [[ } ]]" $ checkParsed pres)
+    many_indentline_br_inner_no_input = TestCase (assertBool "(many $try text) >> (char '}') >> eof [[ } ]]" $ checkParsed pres)
         where
-        pres = (runParser ((many $ try indentedline) >> char '}' >> eof) (IndentState 0 False 1) "test" "}")
+        pres = (runParser ((many $ try text) >> char '}' >> eof) (IndentState 0 False 1) "test" "}")
 
-    indentline_br_inner_no_input = TestCase (assertBool "NOT indentedline >> (char '}') >> eof [[ } ]]" $ not $ checkParsed pres)
+    indentline_br_inner_no_input = TestCase (assertBool "NOT text >> (char '}') >> eof [[ } ]]" $ not $ checkParsed pres)
         where
-        pres = (runParser (indentedline >> char '}' >> eof) (IndentState 0 False 1) "test" "}")
+        pres = (runParser (text >> char '}' >> eof) (IndentState 0 False 1) "test" "}")
 
     note = TestCase (assertBool "taggedtext[[ \\note{Test Me} ]]" (checkParsed pres))
         where

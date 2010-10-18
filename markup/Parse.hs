@@ -80,11 +80,6 @@ emptyline :: CharParser IndentState ()
 emptyline = try $ (many (char ' ')) >> eol >> return ()
 skipemptylines = skipMany emptyline
 
-indentedline :: CharParser IndentState Text
-indentedline = do
-    curindent
-    t <- text
-    return t
 
 
 rawtext :: CharParser IndentState Text
@@ -139,9 +134,10 @@ linktext = do
 
 text :: CharParser IndentState Text
 text = do
+    notFollowedBy eofl
     lookAhead $ noneOf "* \n"
     first <- (try escapedchar) <|> (return $ RawText "")
-    txt <- many1 (taggedtext <|> linktext <|> rawtext)
+    txt <- many (taggedtext <|> linktext <|> rawtext)
     next <- (char '\n' >> (return $ RawText " ")) <|> (return $ RawText "")
     return $ Sequence ((first:txt)++[next])
 
@@ -149,10 +145,10 @@ text = do
 
 paragraph :: CharParser IndentState Element
 paragraph = do
-    notFollowedBy (linkdef >> eofl)
-    lines <- many1 $ try indentedline
+    first <- text
+    rest <- many $ try (curindent >> text)
     optional emptyline
-    return $ Paragraph $ Sequence lines
+    return $ Paragraph $ Sequence (first:rest)
 
 verbatimline = do {
             curindent
@@ -203,14 +199,19 @@ linkdef = do
     char '>'
     skipMany (char ' ')
     eofl
+    eofl
     return $ LinkDef key url
 
 element :: CharParser IndentState Element
 element = do
-    (try paragraph)
-    <|> do
-        curindent
-        header <|> olist <|> ulist <|> linkdef <|> verbatim <|> block
+    curindent
+    try linkdef -- This needs to be tried because it might actually be a paragraph!
+    <|> (header <?> "header")
+    <|> (olist <?> "olist")
+    <|> (ulist <?> "ulist")
+    <|> (verbatim <?> "verbatim")
+    <|> (block <?> "block")
+    <|> (paragraph <?> "paragraph")
 
 
 document :: CharParser IndentState Document
