@@ -14,7 +14,7 @@ tracex x = trace (show x) x
 checkParsed (Left _) = False
 checkParsed (Right _) = True
 
-tests = TestList [indentline, indentline_empty, indentline_space, indentline_space2, t_emptyline, t_paragraph, t_text, text_br, text_br_inner, indentline_br_inner, many_indentline_br_inner, note, note_bad, indentline_br_inner_fail, many_indentline_br_inner_fail, many_indentline_br_inner_no_consume_all, many_indentline_br,indentline_br,many_indentline_br_inner_no_input, indentline_br_inner_no_input  ,h1,h2,h3,h3wcontent,h2wcontent, t_escapedchar, t_escapedchar_not,t_olistelem, t_olist]
+tests = TestList [indentline, indentline_empty, indentline_space, indentline_space2, t_emptyline, t_paragraph, t_text, text_br, text_br_inner, indentline_br_inner, many_indentline_br_inner, note, note_bad, indentline_br_inner_fail, many_indentline_br_inner_fail, many_indentline_br_inner_no_consume_all, many_indentline_br,indentline_br,many_indentline_br_inner_no_input, indentline_br_inner_no_input  ,h1,h2,h3,h3wcontent,h2wcontent, t_escapedchar, t_escapedchar_not,t_olistelem, t_olist, t_block2]
     where
     indentline_space = TestCase (assertBool "parse fails (match below)" $ not $ checkParsed pres)
         where
@@ -131,6 +131,9 @@ tests = TestList [indentline, indentline_empty, indentline_space, indentline_spa
     t_olist = TestCase (assertBool "olist >> eof[   # olist\\n  # olist2\\n ]]"$ checkParsed pres)
         where
         pres = (runParser (olist >> eof) (IndentState 0 False 0) "test" "  # olist\n  # olist2")
+    t_block2 = TestCase (assertBool "block [ '  1\\n  2']" $ (==1) $ length p)
+        where
+        Right (Block p) = runParser (block >>= (\x -> (eof >> return x))) (IndentState 0 False 0) "test" "  oline1\n  oline2\n"
 
 main = runTestTT tests
 
