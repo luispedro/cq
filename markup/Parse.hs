@@ -24,14 +24,10 @@ module Parse where
 import Markup
 import Text.ParserCombinators.Parsec
 
-{- IndentState saves the state of the parser
- -   (nr of indent level measured in spaces)
- -   (whether we have already consumed the current line's indentation)
- -   (nesting level [for \note{} style tags]
- -}
-data IndentState = IndentState  { indentLevel :: Integer
-                                , ignoreNext :: Bool
-                                , nestLevel :: Integer } deriving (Show)
+data IndentState = IndentState  { indentLevel :: Integer -- Nr of spaces to indent
+                                , ignoreNext :: Bool -- Whether to ignore next call
+                                , nestLevel :: Integer -- Nesting level (for \note{} style tags)
+                                } deriving (Show)
 
 noIgnoreNext st = st {ignoreNext = False}
 push_indent n = updateState $ push_indent' n
@@ -67,9 +63,7 @@ verbatimstart = try $ string "   "
 blockstart = try $ string "  "
 
 curindent :: CharParser IndentState ()
-curindent = try $ do
-        st <- getState
-        curindent' st
+curindent = try $ getState >>= curindent'
     where
     curindent' :: IndentState -> CharParser IndentState ()
     curindent' (IndentState  _ True _) = updateState noIgnoreNext
