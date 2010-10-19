@@ -186,13 +186,9 @@ header = do
     return $ Header n rest
 
 linkdef = do
-    char '['
-    key <- many (noneOf "]\n")
-    char ']'
+    key <- between (char '[') (char ']') (many (noneOf "]\n"))
     skipMany (char ' ')
-    char '<'
-    url <- many (noneOf ">")
-    char '>'
+    url <- between (char '<') (char '>') (many (noneOf ">\n"))
     skipMany (char ' ')
     eofl
     eofl
