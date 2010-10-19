@@ -126,15 +126,14 @@ linktext = do
         return $ LinkWKey txt key
 
 
-text :: CharParser IndentState Text
+text :: CharParser IndentState [Text]
 text = do
     notFollowedBy eofl
     lookAhead $ noneOf "* \n"
     first <- (try escapedchar) <|> (return $ RawText "")
-    txt <- many (taggedtext <|> linktext <|> rawtext)
-    next <- (char '\n' >> (return $ RawText " ")) <|> (return $ RawText "")
-    return $ Sequence ((first:txt)++[next])
-
+    rest <- many (taggedtext <|> linktext <|> rawtext)
+    eofl
+    return (first:rest)
 
 
 paragraph :: CharParser IndentState Element
@@ -144,13 +143,22 @@ paragraph = do
     first <- text
     rest <- many $ try (curindent >> text)
     optional emptyline
-    return $ Paragraph $ Sequence (first:rest)
+    return $ Paragraph $ Sequence $ mergerawtexts $ addspaces (first:rest)
+  where
+  addspaces :: [[Text]] -> [Text]
+  addspaces [] = []
+  addspaces [x] = x
+  addspaces (x:xs) = x ++ [RawText " "] ++ (addspaces xs)
+  mergerawtexts :: [Text] -> [Text]
+  mergerawtexts [] = []
+  mergerawtexts ((RawText r0):(RawText r1):xs) = mergerawtexts ((RawText (r0++r1)):xs)
+  mergerawtexts ((RawText ""):xs) = mergerawtexts xs
+  mergerawtexts (t:xs) = (t:mergerawtexts xs)
 
-verbatimline = do {
-            curindent
-          ; vtext <- manyTill anyChar eofl
-          ; return (vtext ++ "\n")
-        } <|> (emptyline >> (return "\n"))
+verbatimline = do
+    curindent
+    vtext <- manyTill anyChar eofl
+    return (vtext ++ "\n")
 
 verbatim = do
     verbatimstart
