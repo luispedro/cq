@@ -35,7 +35,7 @@ push_indent n = updateState $ push_indent' n
 pop_indent n = updateState $ pop_indent' n
     where pop_indent' n st = st { indentLevel = (+ (-n)) $ indentLevel st}
 push_state = updateState push_state'
-    where push_state' st = st { ignoreNext = True, nestLevel = (+1) $ nestLevel st}
+    where push_state' st = st { nestLevel = (+1) $ nestLevel st}
 pop_state = updateState pop_state'
     where pop_state' st = st { nestLevel = (+ (-1)) $ nestLevel st}
 
