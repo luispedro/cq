@@ -139,6 +139,8 @@ text = do
 
 paragraph :: CharParser IndentState Element
 paragraph = do
+    notFollowedBy (string "  ")
+    notFollowedBy (char '*')
     first <- text
     rest <- many $ try (curindent >> text)
     optional emptyline
@@ -199,13 +201,12 @@ linkdef = do
 element :: CharParser IndentState Element
 element = do
     curindent
-    try linkdef -- This needs to be tried because it might actually be a paragraph!
-    <|> (header <?> "header")
-    <|> (olist <?> "olist")
-    <|> (ulist <?> "ulist")
-    <|> (verbatim <?> "verbatim")
-    <|> (block <?> "block")
-    <|> (paragraph <?> "paragraph")
+    try linkdef <|> (header <?> "header")
+                <|> (olist <?> "olist")
+                <|> (ulist <?> "ulist")
+                <|> (verbatim <?> "verbatim")
+                <|> (block <?> "block")
+                <|> (paragraph <?> "paragraph")
 
 
 document :: CharParser IndentState Document
