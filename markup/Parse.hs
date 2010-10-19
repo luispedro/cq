@@ -202,14 +202,21 @@ linkdef = do
     eofl
     return $ LinkDef key url
 
+{- We could left-factor the grammar below because there are a bunch of
+ - backtracking steps for the initial list marker, the initial block
+ - marker, ...
+ -
+ - This would be probably unmeasurably faster and more elegant in the
+ - theoretical sense but would cost us code elegance.
+ -}
 element :: CharParser IndentState Element
 element = do
     curindent
     try linkdef <|> (header <?> "header")
                 <|> (olist <?> "olist")
                 <|> (ulist <?> "ulist")
-                <|> (verbatim <?> "verbatim")
-                <|> (block <?> "block")
+                <|> (verbatim <?> "verbatim") -- verbatim before block
+                <|> (block <?> "block") -- block before paragraph
                 <|> (paragraph <?> "paragraph")
 
 
