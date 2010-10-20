@@ -24,9 +24,13 @@ module Parse where
 import Markup
 import Text.ParserCombinators.Parsec
 
+data ParseOptions = ParseOptions { useLinks :: Bool
+                                 , blockTags :: [String]
+                                 } deriving (Show)
 data IndentState = IndentState  { indentLevel :: Integer -- Nr of spaces to indent
                                 , ignoreNext :: Bool -- Whether to ignore next call
                                 , nestLevel :: Integer -- Nesting level (for \note{} style tags)
+                                , parseOptions :: ParseOptions
                                 } deriving (Show)
 
 noIgnoreNext st = st {ignoreNext = False}
@@ -66,8 +70,8 @@ curindent :: CharParser IndentState ()
 curindent = try $ getState >>= curindent'
     where
     curindent' :: IndentState -> CharParser IndentState ()
-    curindent' (IndentState  _ True _) = updateState noIgnoreNext
-    curindent' (IndentState  n False _) = (count (fromInteger n) (char ' ')) >> (return ())
+    curindent' (IndentState  _ True _ _) = updateState noIgnoreNext
+    curindent' (IndentState  n False _ _) = (count (fromInteger n) (char ' ')) >> (return ())
 
 
 emptyline :: CharParser IndentState ()
@@ -98,7 +102,8 @@ taggedtext = do
     ((oneOf "\\{}[]#-*") >>= (return . RawText . charToStr)) <|> do -- if it is followed by a \, then it is an escaped \
         tag <- tagname
         char '{'
-        if tag `elem` blockTags then do
+        st <- getState
+        if tag `elem` (blockTags $ parseOptions st) then do
             push_state
             par <- paragraph
             elems <- many element
@@ -117,13 +122,17 @@ escapedchar :: CharParser IndentState Text
 escapedchar = (char '\\') >> (oneOf "\\#-") >>= (return . RawText . charToStr)
 
 linktext = do
-    char '['
-    txt <- many (noneOf "|]\n")
-    ((char ']') >> (return $ Link txt)) <|> do
-        char '|'
-        key <- many (noneOf "]\n")
-        char ']'
-        return $ LinkWKey txt key
+    st <- getState
+    if (not $ useLinks (parseOptions st)) then
+        fail "Link parsing not active"
+     else do
+        char '['
+        txt <- many (noneOf "|]\n")
+        ((char ']') >> (return $ Link txt)) <|> do
+            char '|'
+            key <- many (noneOf "]\n")
+            char ']'
+            return $ LinkWKey txt key
 
 
 text :: CharParser IndentState [Text]
@@ -243,9 +252,12 @@ preprocess input = concat $ map tabTo8 $ removeModeline $ fixNLs input
     modeline = "-*- mode: markup; -*-"
 
 --
--- Entry Point
+-- Entry Points
 --
 
 parseMarkup :: String -> Either ParseError Document
-parseMarkup input = runParser document (IndentState  0 False 0) "markup" $ preprocess input
+parseMarkup = parseMarkupWithOptions (ParseOptions True ["note"])
+
+parseMarkupWithOptions :: ParseOptions -> String -> Either ParseError Document
+parseMarkupWithOptions options input = runParser document (IndentState 0 False 0 options) "markup" $ preprocess input
 

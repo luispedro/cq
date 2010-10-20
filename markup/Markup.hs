@@ -26,9 +26,6 @@ data Element = Paragraph Text
 
 data Document = Document [Element]
 
-blockTags = ["note"]
-
-
 instance Show Text where
     show (RawText str) = (xmlEscape str)
     show (Link txt) = xmlShow "link" $ xmlEscape txt
