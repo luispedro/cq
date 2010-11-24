@@ -19,6 +19,14 @@ module Parse where
  - ** Interface
  - 
  - Main function is parseMarkup which is String -> Either ParseError Document
+ -
+ - Another function parseMarkupWithOptions allows the user to specify whether
+ - to use links and which tags should be considered block level. parseMarkup is
+ - defined as
+ -
+ -    parseMarkup str = parseMarkupWithOptions (ParseOptions True ["note"]) str
+ - 
+ - i.e., \b{use links} and consider \i{note} to be block level.
  -}
 
 import Markup
