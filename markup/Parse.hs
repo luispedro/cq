@@ -24,12 +24,13 @@ module Parse where
 import Markup
 import Text.ParserCombinators.Parsec
 
-data ParseOptions = ParseOptions { useLinks :: Bool
-                                 , blockTags :: [String]
+data ParseOptions = ParseOptions { useLinks :: Bool      -- Whether to use links
+                                 , blockTags :: [String] -- List of tags that should be block level
                                  } deriving (Show)
+
 data IndentState = IndentState  { indentLevel :: Integer -- Nr of spaces to indent
-                                , ignoreNext :: Bool -- Whether to ignore next call
-                                , nestLevel :: Integer -- Nesting level (for \note{} style tags)
+                                , ignoreNext :: Bool     -- Whether to ignore next call
+                                , nestLevel :: Integer   -- Nesting level (for \note{} style tags)
                                 , parseOptions :: ParseOptions
                                 } deriving (Show)
 
@@ -101,18 +102,18 @@ taggedtext = do
     (char '\\')
     ((oneOf "\\{}[]#-*") >>= (return . RawText . charToStr)) <|> do -- if it is followed by a \, then it is an escaped \
         tag <- tagname
-        char '{'
+        char '{' <?> "tagged text open marker '{'"
         st <- getState
         if tag `elem` (blockTags $ parseOptions st) then do
             push_state
             par <- paragraph
             elems <- many element
-            char '}'
+            char '}' <?> "tagged text close marker '}'"
             pop_state
             return $ BlockTag tag (par:elems)
          else do
             Sequence content <- inlinetext
-            char '}'
+            char '}' <?> "tagged text close marker '}'"
             return $ InlineTag tag content
 
 inlinetext :: CharParser IndentState Text
@@ -158,7 +159,7 @@ paragraph = do
   addspaces [] = []
   addspaces [x] = x
   addspaces (x:xs) = x ++ [RawText " "] ++ (addspaces xs)
-  mergerawtexts :: [Text] -> [Text]
+  mergerawtexts :: [Text] -> [Text] -- mergerawtexts isn't strictly necessary, but makes for nicer output
   mergerawtexts [] = []
   mergerawtexts ((RawText r0):(RawText r1):xs) = mergerawtexts ((RawText (r0++r1)):xs)
   mergerawtexts ((RawText ""):xs) = mergerawtexts xs
@@ -216,7 +217,7 @@ linkdef = do
  - marker, ...
  -
  - This would be probably unmeasurably faster and more elegant in the
- - theoretical sense but would cost us code elegance.
+ - grammar sense but would cost us code elegance.
  -}
 element :: CharParser IndentState Element
 element = do
